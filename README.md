@@ -37,16 +37,11 @@ Aesthetic, photorealistic YouTube thumbnails — researched, designed, and gener
 
 **Requirements:** [Python 3.10+](https://python.org) · [Claude Code](https://claude.ai/download) · [Gemini API key](https://ai.google.dev) (free)
 
-```bash
-git clone https://github.com/younessili/aesthetic-thumbnails.git
-cd aesthetic-thumbnails
-```
+Open Claude Code anywhere and paste this:
 
-Open Claude Code in the folder and paste:
+> **Clone https://github.com/younessili/aesthetic-thumbnails.git, cd into it, read the CLAUDE.md, and help me get set up. Walk me through everything — API keys, headshots, brand setup — then let's make my first thumbnail.**
 
-> **I just cloned this repo. I want to set up and make my first thumbnail. Walk me through everything — API keys, headshots, brand setup, and then let's make one.**
-
-Pim (the creative director built into this tool) takes it from there.
+That's it. Pim (the creative director built into this tool) handles the rest.
 
 ---
 
@@ -60,22 +55,32 @@ Pim (the creative director built into this tool) takes it from there.
 | **2. Concept Design** | Proposes 2-3 visual metaphor concepts — each with mood, color palette, and headshot selection. Grounded in research + visual psychology. |
 | **3. Refine** | Generates photorealistic thumbnails, auto-evaluates against 12 quality checkpoints, pairs each with 3 title options, and previews across YouTube contexts (desktop, mobile, TV). |
 
-<details>
-<summary><b>What's inside the repo</b></summary>
-<br>
-
-| File | What it does |
-|------|-------------|
-| `CLAUDE.md` | The brain — Pim's persona, setup wizard, and workflow routing |
-| `prompt.md` | Full 3-phase execution manual (research → concepts → refine) |
-| `learnings.md` | Grows smarter with each session — stores creative patterns |
-| `execution/` | Python scripts: image generation, outlier research, headshot indexing, preview viewer |
-| `context/` | Visual psychology, aesthetic theory, title guide, brand reference |
-| `assets/headshots/` | Your headshot photos (added during setup) |
-| `assets/inspiration/` | Thumbnails you admire — optional, informs concept design |
-| `output/` | Generated thumbnails land here, organized by date and video |
-
-</details>
+```
+aesthetic-thumbnails/
+│
+├── CLAUDE.md                  ← The brain — Pim's persona + setup wizard
+├── prompt.md                  ← 3-phase execution manual
+├── learnings.md               ← Grows smarter with each session
+│
+├── execution/
+│   ├── generate_thumbnail.py  ← Gemini image generation
+│   ├── find_outliers.py       ← YouTube outlier research
+│   ├── rename_headshots.py    ← AI headshot indexing
+│   ├── preview_thumbnail.py   ← Multi-context preview viewer
+│   └── requirements.txt
+│
+├── context/
+│   ├── visual-psychology.md   ← How visuals trigger emotions
+│   ├── visual-aesthetic.md    ← Depth, balance, simplicity, novelty
+│   ├── title-guide.md         ← Title-thumbnail-video triangle
+│   └── visual-brand.md        ← Your brand (generated during setup)
+│
+├── assets/
+│   ├── headshots/             ← Your photos (added during setup)
+│   └── inspiration/           ← Thumbnails you admire (optional)
+│
+└── output/                    ← Generated thumbnails land here
+```
 
 ---
 
