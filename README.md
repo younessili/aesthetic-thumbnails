@@ -92,9 +92,17 @@ All API keys stay local — stored in your `.env` file, never uploaded.
 
 ---
 
+## Questions?
+
+Join the [newsletter](https://newsletter.aliyounessi.com) and reply to any email. Open a [GitHub issue](https://github.com/younessili/aesthetic-thumbnails/issues). Or DM me on social.
+
+---
+
 ## Credits
 
 Built by [Ali Younessi](https://aliyounessi.com) / [OperateU](https://aliyounessi.com).
+
+[YouTube](https://youtube.com/@Ali_Younessi) · [Instagram](https://instagram.com/ali_younessi) · [Newsletter](https://newsletter.aliyounessi.com)
 
 ---
 
