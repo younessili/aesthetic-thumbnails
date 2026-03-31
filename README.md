@@ -29,52 +29,53 @@ Aesthetic, photorealistic YouTube thumbnails — researched, designed, and gener
   </tr>
 </table>
 
-> Every image above was generated from a single headshot photo + a topic description. No Photoshop. No templates.
-
----
-
-## How It Works
-
-3-phase creative workflow — not a template filler.
-
-```
-Phase 1: Research       → Find outlier thumbnails in your niche
-                           Study what's working and what's not
-                           Identify the visual gap
-
-Phase 2: Concept Design → 2-3 visual metaphor concepts
-                           Each with mood, color, headshot selection
-                           Grounded in research + visual psychology
-
-Phase 3: Refine         → AI-generated photorealistic thumbnails
-                           Auto-evaluated against 12 quality checkpoints
-                           Paired with 3 title options per thumbnail
-                           Previewed across YouTube contexts (desktop, mobile, TV)
-```
+> Every image above was generated from a single headshot + a topic description. No Photoshop. No templates.
 
 ---
 
 ## Quick Start
+
+**Requirements:** [Python 3.10+](https://python.org) · [Claude Code](https://claude.ai/download) · [Gemini API key](https://ai.google.dev) (free)
 
 ```bash
 git clone https://github.com/younessili/aesthetic-thumbnails.git
 cd aesthetic-thumbnails
 ```
 
-Open Claude Code in this folder and say:
+Open Claude Code in the folder and paste:
 
-> "I just cloned this repo. Help me get set up."
+> **I just cloned this repo. I want to set up and make my first thumbnail. Walk me through everything — API keys, headshots, brand setup, and then let's make one.**
 
-Pim (the creative director built into this tool) walks you through everything — API keys, headshots, brand setup, and your first thumbnail session.
+Pim (the creative director built into this tool) takes it from there.
 
 ---
 
-## What You Need
+## How It Works
 
-- **Python 3.10+**
-- **Claude Code** (CLI, desktop app, or IDE extension)
-- **Gemini API key** — free from [ai.google.dev](https://ai.google.dev)
-- **YouTube API key** (optional) — free from [Google Cloud Console](https://console.cloud.google.com). Powers the research phase.
+3-phase creative workflow. Not a template filler.
+
+| Phase | What happens |
+|-------|-------------|
+| **1. Research** | Finds outlier thumbnails in your niche. Studies what's working, what's not, and where the visual gap is. |
+| **2. Concept Design** | Proposes 2-3 visual metaphor concepts — each with mood, color palette, and headshot selection. Grounded in research + visual psychology. |
+| **3. Refine** | Generates photorealistic thumbnails, auto-evaluates against 12 quality checkpoints, pairs each with 3 title options, and previews across YouTube contexts (desktop, mobile, TV). |
+
+<details>
+<summary><b>What's inside the repo</b></summary>
+<br>
+
+| File | What it does |
+|------|-------------|
+| `CLAUDE.md` | The brain — Pim's persona, setup wizard, and workflow routing |
+| `prompt.md` | Full 3-phase execution manual (research → concepts → refine) |
+| `learnings.md` | Grows smarter with each session — stores creative patterns |
+| `execution/` | Python scripts: image generation, outlier research, headshot indexing, preview viewer |
+| `context/` | Visual psychology, aesthetic theory, title guide, brand reference |
+| `assets/headshots/` | Your headshot photos (added during setup) |
+| `assets/inspiration/` | Thumbnails you admire — optional, informs concept design |
+| `output/` | Generated thumbnails land here, organized by date and video |
+
+</details>
 
 ---
 
@@ -87,23 +88,7 @@ Pim (the creative director built into this tool) walks you through everything �
 | Headshot analysis | ~$0.002 per image |
 | **Typical session** | **$1.50 - $2.50** |
 
-All API keys are local — stored in your `.env` file, never uploaded anywhere.
-
----
-
-## What's Inside
-
-```
-aesthetic-thumbnails/
-├── CLAUDE.md              ← The brain — Pim's persona + workflow routing
-├── prompt.md              ← Full 3-phase execution manual
-├── learnings.md           ← Grows smarter with each session
-├── execution/             ← Python scripts for generation + research
-├── context/               ← Visual psychology, aesthetics, brand, titles
-├── assets/headshots/      ← Your headshot photos
-├── assets/inspiration/    ← Thumbnails you admire (optional)
-└── output/                ← Generated thumbnails land here
-```
+All API keys stay local — stored in your `.env` file, never uploaded.
 
 ---
 
