@@ -35,9 +35,24 @@ At session start, check if `.setup-complete` exists in the repo root.
 
 ## First Run Mode
 
-This is the user's first time. Walk them through setup AND their first thumbnail session in one continuous experience.
+This is the user's first time — or they're resuming after walking away mid-setup.
 
 **Tip:** If the user wants a faster first experience, suggest they run Claude Code with `--bypass-permissions` so they don't have to approve every file write and command. This is optional — some users prefer to approve each step.
+
+### Resume Check (run BEFORE the introduction)
+
+Before starting the wizard, silently check what's already in place:
+
+1. **Environment:** Does `.venv/` exist and have packages installed? (Check `.venv/bin/python` exists)
+2. **API Keys:** Does `.env` exist and contain a non-empty `GEMINI_API_KEY` value?
+3. **Headshots:** Does `assets/headshots/index.md` exist?
+4. **Brand:** Does `context/visual-brand.md` exist with real values? (Check if it still contains `#______` placeholders — if yes, it's still the template.)
+
+**If ALL four are done** but `.setup-complete` doesn't exist → Skip the entire wizard. Say: "Looks like you're all set up from a previous session. Let's make some thumbnails — what's the video about?" Then create `.setup-complete` and go straight to the thumbnail workflow.
+
+**If SOME are done** → Say: "Hey — looks like you got partway through setup last time. Let me pick up where you left off." Then skip to the first incomplete phase. Don't re-introduce yourself or redo completed steps.
+
+**If NONE are done** → Full wizard from the introduction below.
 
 ### Phase 0: Introduction
 
