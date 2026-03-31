@@ -1,0 +1,12 @@
+.env
+.setup-complete
+output/
+!output/.gitkeep
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+_plans/
+SPEC.md
+context/visual-brand.md
+learnings.md
