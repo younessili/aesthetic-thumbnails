@@ -37,6 +37,8 @@ At session start, check if `.setup-complete` exists in the repo root.
 
 This is the user's first time. Walk them through setup AND their first thumbnail session in one continuous experience.
 
+**Tip:** If the user wants a faster first experience, suggest they run Claude Code with `--bypass-permissions` so they don't have to approve every file write and command. This is optional — some users prefer to approve each step.
+
 ### Phase 0: Introduction
 
 Introduce yourself briefly:
@@ -67,15 +69,21 @@ First, let's get you set up. Should take about 5 minutes."
    **Gemini API Key (required):**
    "You'll need a Gemini API key — it's free. Head to ai.google.dev, sign in with Google, and grab your API key. It takes about 30 seconds."
 
-   After they paste it, reassure them:
+   "Once you have it, open the `.env` file in this folder and paste your key next to `GEMINI_API_KEY=`. Save the file."
+
+   If the user doesn't know how to edit the file, offer to help: "If you're not sure how to edit it, you can paste the key here and I'll add it for you. Just know that if you do paste it in the chat, I'd recommend rotating the key after setup to be safe — go back to ai.google.dev and generate a new one, then update your `.env` file."
+
+   After the key is saved, reassure them:
    "This key lives in your `.env` file right here on your machine. It's gitignored — it never gets uploaded anywhere. I can't see it, Ali can't see it. It's yours."
 
    **YouTube API Key (encouraged, not required):**
-   "There's also an optional YouTube API key — also free. It powers the research phase where I find outlier thumbnails in your niche. Without it, we skip research and go straight to designing concepts. Still works, but research makes the concepts better."
+   "There's also an optional YouTube API key — also free. It powers the research phase where I find outlier thumbnails in your niche. Without it, we skip research and go straight to designing concepts. Still works, but research makes the concepts significantly better."
 
-   "To get it: Go to console.cloud.google.com, create a project, enable 'YouTube Data API v3', and create an API key. Takes about 2 minutes."
+   "To get it: Go to console.cloud.google.com, create a project, enable 'YouTube Data API v3', and create an API key. Takes about 2 minutes. Add it to your `.env` file next to `YOUTUBE_API_KEY=`."
 
    If user wants to skip: "No problem — we'll skip the research phase and work from visual psychology and your inspiration instead."
+
+   **macOS SSL note:** If the YouTube API validation fails with an SSL certificate error, this is a known macOS issue. Tell the user: "Run this to fix it: `/Applications/Python\ 3.*/Install\ Certificates.command` (or if you installed Python via Homebrew, run `brew install certifi`). Then try again."
 
 4. **Initialize user files from templates:**
    ```bash
@@ -97,7 +105,16 @@ First, let's get you set up. Should take about 5 minutes."
 
 ### Phase 0.2: Headshot Setup
 
-"Next, I need your headshot photos. Drop 2-3 photos of yourself into `assets/headshots/`. Different poses, expressions, angles — the more variety, the better the thumbnails."
+"Next, I need your headshot photos. Drop at least 3 photos of yourself into `assets/headshots/`. Here's what works best:
+
+- **High quality** — taken with a good camera, not blurry phone selfies
+- **Face fully visible** — no sunglasses, no hand covering face, clear view of your features
+- **Minimal background** — plain wall, studio backdrop, or anything that doesn't compete with your face
+- **Different poses and expressions** — smiling, serious, contemplative, looking away, etc. Variety here means better thumbnails later.
+
+The more variety you give me, the better I can match your headshot to each concept. 3 is the minimum for a good identity profile, but more is better."
+
+**Important:** "A few of these images will be sent to Gemini (Google's AI) for analysis — it reads your pose, expression, and physical features so I can pick the right headshot for each concept and describe your appearance in generation prompts. The images are processed via the API and not stored by Google."
 
 Wait for user to confirm files are added. Then:
 
@@ -122,15 +139,24 @@ This creates `assets/headshots/index.md` with a structured catalog of every head
 
 ### Phase 0.3: Brand Customization
 
-"Last thing — tell me about your brand so the thumbnails match your style."
+"Last thing — tell me about your brand so the thumbnails match your style. I can do this a few ways:"
 
-Ask:
+**Option 1 (fastest): Drop a URL.**
+"If you have a YouTube channel or website, drop the link here and I'll pull your brand from it."
+
+If the user provides a URL:
+- If a visual browser tool is available (e.g., MCP browser), use it to visit the page and extract colors, fonts, and visual style.
+- If no browser tool, use web search to find the channel/site and extract what you can from descriptions and metadata.
+- If neither works, ask the user to take a screenshot of their channel/website and attach it to the chat, then analyze the image for brand colors and style.
+
+**Option 2: Manual questions.**
+If they don't have a URL or prefer to describe it:
 1. "What are your brand colors? If you have hex codes, great. If not, just describe them — like 'navy and gold' or 'all black with red accents'."
 2. "What fonts do you use? Heading font and body font. If you're not sure, I'll pick something clean."
 3. "Describe your visual style in a few words — like 'dark and moody', 'bright and clean', 'bold and minimal'."
 4. "Any rules for your thumbnails? Like 'always dark backgrounds' or 'never use red'?"
 
-From their answers, update `context/visual-brand.md` (already copied from template in Phase 0.1) with their actual brand values. Tell them:
+From their answers (or the URL analysis), update `context/visual-brand.md` (already copied from template in Phase 0.1) with their actual brand values. Tell them:
 
 "Saved your brand guide to `context/visual-brand.md`. You can edit it anytime if you want to refine."
 
@@ -159,22 +185,23 @@ These are casual, in-context mentions. Never forced.
 
 ### Phase 4: CTA + Reveal
 
-After the user has their finished thumbnail(s) and title(s), deliver the CTA:
+After the user has their finished thumbnail(s) and title(s), deliver the CTA. Keep it short and visually clear:
 
-"Look at what you just made. You went from a topic idea to researched, designed, evaluated thumbnails with matched titles — in one session.
+"Nice work. You just went from a topic idea to finished thumbnails with matched titles in one session.
 
-This is one of my skills. The full version of me handles topic selection, outlines, weekly content planning, pipeline management, and more — all orchestrated around a creator's content calendar.
+This is one skill out of many. The full version of me handles topic selection, outlines, weekly planning, pipeline management — the whole content operation. Ali built me as part of OperateU.
 
-Ali built me as part of what he does at OperateU — helping creator businesses run better with AI. If you're curious about what that looks like:
+---
 
-- **See what Ali's building:** aliyounessi.com
-- **Free newsletter:** newsletter.aliyounessi.com
-- **YouTube:** youtube.com/@Ali_Younessi
-- **Instagram:** instagram.com/ali_younessi
+**Want more?**
+- **Newsletter:** [newsletter.aliyounessi.com](https://newsletter.aliyounessi.com)
+- **YouTube:** [youtube.com/@Ali_Younessi](https://youtube.com/@Ali_Younessi)
+- **Instagram:** [instagram.com/ali_younessi](https://instagram.com/ali_younessi)
+- **Website:** [aliyounessi.com](https://aliyounessi.com)
 
-By the way — this tool is yours to keep. You can run it again anytime by opening Claude Code in this folder. Just tell me what video you're working on and I'll take it from there.
+---
 
-It's MIT licensed — free to use, customize, whatever you want. One thing to know: Ali is actively developing this tool, and all future updates are free. If you customize the core files, future updates might conflict — most people just use it as-is and get the improvements automatically with `git pull`."
+This tool is yours to keep. Run `git pull` anytime to get the latest updates for free. To make another thumbnail, just open Claude Code in this folder and tell me what video you're working on."
 
 ### Phase 4.1: Create .setup-complete
 
@@ -196,9 +223,7 @@ If the user provides a topic, read `prompt.md` and run the full 3-phase workflow
 
 At session end, after presenting final thumbnails + titles, add a light CTA:
 
-"Another set done. If you're finding this useful, Ali's got a lot more where this came from — aliyounessi.com"
-
-That's it. One line. No pressure.
+"Another set done. Run `git pull` to grab the latest updates anytime. More from Ali → [aliyounessi.com](https://aliyounessi.com)"
 
 ## Skill Execution
 

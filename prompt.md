@@ -202,7 +202,7 @@ Why this works: One sentence — why would someone stop scrolling?
 - **Symmetry and balance.** The human eye is drawn to symmetrical compositions. A centered face, a balanced split, mirrored elements — these feel intentional and beautiful. Not every concept needs perfect symmetry, but consider it. Asymmetry works too when it's clearly deliberate (rule of thirds), not accidental.
 - **Don't default to clickbait.** No red X's over dollar amounts. No shocked faces unless the concept genuinely calls for it. Your channel provides real value — the thumbnail should signal that.
 
-Present all concepts to the user. Wait for their response before generating.
+Present all concepts to the user, then ask: "Would you like me to generate all three so you can compare side by side, or pick one to start with?" Wait for their response before generating. If the user picks one, generate that concept first. If they want all three, generate all concepts in parallel.
 
 ---
 
@@ -233,6 +233,8 @@ Once the user picks a concept (or brings their own), generate and auto-refine.
 ### Auto-Refinement Loop
 
 Each concept goes through up to 3 rounds of automatic generation and self-evaluation. You generate, visually review the result, check it against quality gates, and if any gate fails — rewrite the prompt and try again. The user only sees thumbnails that pass all gates.
+
+**Communicating during auto-refinement:** When a gate fails and you need to regenerate, tell the user explicitly what happened before regenerating. Example: "Concept C didn't pass the likeness gate — the face doesn't match your headshots closely enough. I'm regenerating with stronger identity instructions." The user should never wonder why you're generating again.
 
 **Cost limit: $2.50 max per thumbnail session** (~$0.134/generation, so ~18 generations max). Track running cost across all concepts. Stop generating if approaching the limit.
 

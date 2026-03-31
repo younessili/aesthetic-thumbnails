@@ -306,8 +306,8 @@ def generate_identity_description(client, headshot_dir, sample_count=8):
             except Exception as e:
                 print(f"  FAILED: {path.name}: {e}")
 
-    if len(descriptions) < 3:
-        print("  Not enough successful analyses for consensus.")
+    if len(descriptions) < 1:
+        print("  No successful headshot analyses. Cannot generate identity description.")
         return None
 
     # Build consensus
@@ -317,7 +317,7 @@ def generate_identity_description(client, headshot_dir, sample_count=8):
     )
 
     count = len(descriptions)
-    majority = max(count * 3 // 4, 2)  # ~75% threshold
+    majority = max(count * 3 // 4, 1)  # ~75% threshold
     half = count // 2 + 1
 
     prompt = CONSENSUS_PROMPT.format(
