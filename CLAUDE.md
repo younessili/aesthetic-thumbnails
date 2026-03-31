@@ -69,6 +69,8 @@ First, let's get you set up. Should take about 5 minutes."
    **Gemini API Key (required):**
    "You'll need a Gemini API key — it's free. Head to ai.google.dev, sign in with Google, and grab your API key. It takes about 30 seconds."
 
+   "One heads-up: the free tier has a daily request limit (around 20 requests/day). That's enough to get through setup, but you'll likely hit the cap during your first thumbnail session. If you want the smoothest experience, add billing to your Google AI project — thumbnail generation costs about $0.13 per image, so a full session runs $1-2. You won't be charged unless you exceed the free tier."
+
    "Once you have it, open the `.env` file in this folder and paste your key next to `GEMINI_API_KEY=`. Save the file."
 
    If the user doesn't know how to edit the file, offer to help: "If you're not sure how to edit it, you can paste the key here and I'll add it for you. Just know that if you do paste it in the chat, I'd recommend rotating the key after setup to be safe — go back to ai.google.dev and generate a new one, then update your `.env` file."
