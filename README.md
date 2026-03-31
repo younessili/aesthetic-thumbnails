@@ -35,13 +35,18 @@ Aesthetic, photorealistic YouTube thumbnails — researched, designed, and gener
 
 ## Quick Start
 
+Open [Claude Code](https://claude.ai/download) anywhere and paste this:
+
+```
+Clone https://github.com/younessili/aesthetic-thumbnails.git, cd into it,
+read the CLAUDE.md, and help me get set up. Walk me through everything —
+API keys, headshots, brand setup — then let's make my first thumbnail.
+```
+
+> [!TIP]
+> That's the whole setup. Pim (the creative director built into this tool) handles cloning, installing, configuring, and your first thumbnail session.
+
 **Requirements:** [Python 3.10+](https://python.org) · [Claude Code](https://claude.ai/download) · [Gemini API key](https://ai.google.dev) (free)
-
-Open Claude Code anywhere and paste this:
-
-> **Clone https://github.com/younessili/aesthetic-thumbnails.git, cd into it, read the CLAUDE.md, and help me get set up. Walk me through everything — API keys, headshots, brand setup — then let's make my first thumbnail.**
-
-That's it. Pim (the creative director built into this tool) handles the rest.
 
 ---
 
