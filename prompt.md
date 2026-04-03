@@ -216,25 +216,25 @@ Once the user picks a concept (or brings their own), generate and auto-refine.
 
 ```
 □ 1. Generate image
-□ 2. Read the generated image with Read tool
-□ 3. Re-read headshot(s) for likeness comparison
-□ 4. Write full Tier 1 quality gates (pass/fail each gate)
-□ 5. If any gate fails → refine and restart from step 1
-□ 6. Write full Tier 2 diagnostic scoring (all 12 checkpoints with scores)
-□ 7. If score < 30 → refine weakest checkpoints and restart from step 1
-□ 8. Generate 3 title options (read title-guide.md, write triangle check)
-□ 9. Generate preview HTML (preview_thumbnail.py)
-□ 10. Open preview for the user
-□ 11. THEN present thumbnail + diagnostic + titles + preview to the user
+□ 2. Dispatch eval subagent (see "Eval Subagent Dispatch" below)
+□ 3. Receive eval report from subagent
+□ 4. If any Tier 1 gate fails → pick recovery strategy, refine, restart from step 1
+□ 5. If Tier 2 score < 30 → identify WEAK checkpoints, refine, restart from step 1
+□ 6. Generate 3 title options (read title-guide.md, write triangle check)
+□ 7. Generate preview HTML (preview_thumbnail.py)
+□ 8. Open preview for the user
+□ 9. THEN present thumbnail + eval report + titles + preview to the user
 ```
 
 **A thumbnail is not ready to present until every step above is complete.**
 
 ### Auto-Refinement Loop
 
-Each concept goes through up to 3 rounds of automatic generation and self-evaluation. You generate, visually review the result, check it against quality gates, and if any gate fails — rewrite the prompt and try again. The user only sees thumbnails that pass all gates.
+Each concept goes through up to 3 rounds of automatic generation and evaluation. You generate, dispatch a fresh eval subagent to review the result, read the report, and decide whether to regenerate. The user only sees thumbnails that pass all gates and score 30+.
 
-**Communicating during auto-refinement:** When a gate fails and you need to regenerate, tell the user explicitly what happened before regenerating. Example: "Concept C didn't pass the likeness gate — the face doesn't match your headshots closely enough. I'm regenerating with stronger identity instructions." The user should never wonder why you're generating again.
+**Why subagent eval?** The evaluator must NOT see your generation prompt or creative rationale. A fresh agent with no context about what you were "trying to do" produces honest, unbiased evaluation. If you evaluated your own work, you'd unconsciously explain away problems.
+
+**Communicating during auto-refinement:** When a gate fails and you need to regenerate, show the user the eval report and tell them what you're doing. Example: "Concept C didn't pass the likeness gate — the evaluator flagged the jawline as too narrow. I'm regenerating with stronger identity instructions." The user should never wonder why you're generating again.
 
 **Cost limit: $2.50 max per thumbnail session** (~$0.134/generation, so ~18 generations max). Track running cost across all concepts. Stop generating if approaching the limit.
 
@@ -242,18 +242,21 @@ Each concept goes through up to 3 rounds of automatic generation and self-evalua
 
 ```
 Round 1: Generate from concept brief
-  → Read the image with the Read tool
-  → Run Tier 1 quality gates (see below)
-  → If all gates pass: write Tier 2 diagnostic → generate 3 titles → present
-  → If any gate fails: note which gate failed, pick recovery strategy (see below), go to Round 2
+  → Dispatch eval subagent (see below)
+  → Read eval report
+  → If all gates pass AND score 30+: generate 3 titles → present
+  → If any gate fails: note which gate + failure details from report, pick recovery strategy, go to Round 2
+  → If gates pass but score < 30: note WEAK checkpoints from report, go to Round 2
 
 Round 2: Recovery generation (strategy depends on WHICH gate failed — see below)
-  → Run quality gates again
-  → If all pass: write diagnostic → generate 3 titles → present
-  → If any fail: pick recovery strategy, go to Round 3
+  → Dispatch eval subagent
+  → Read eval report
+  → If all pass AND score 30+: generate 3 titles → present
+  → If any fail or score < 30: pick recovery strategy, go to Round 3
 
 Round 3: Final attempt
-  → Run quality gates + write diagnostic → generate 3 titles
+  → Dispatch eval subagent
+  → Read eval report → generate 3 titles
   → Present to the user regardless (3 rounds is the max)
 ```
 
@@ -277,118 +280,56 @@ Round 3: Final attempt
 - Same Tier 2 checkpoint scores WEAK twice in a row → KILL
 - Gemini cannot produce what you're asking for with this prompt approach. Tell the user the concept needs a different execution strategy (e.g., real photo + post-processing) or pivot the concept.
 
-#### Tier 1: Quality Gates (auto-refinement uses ONLY these)
+#### Eval Subagent Dispatch
 
-Quality gates are binary pass/fail. The auto-refinement loop regenerates when any gate fails. No scores — either it passes or it doesn't.
+After generating a thumbnail, dispatch an eval subagent using the Agent tool. The subagent gets a fresh context with no knowledge of your generation prompt or creative decisions.
 
-**Gate 1: Likeness (check FIRST)**
+**How to dispatch:**
 
-**Important: Likeness evaluation is a filter, not a guarantee.** AI evaluating AI-generated faces has inherent limits. This gate catches obvious misses (wrong person entirely) but is not 100% reliable for subtle cases. **The user always makes the final likeness call** — never claim a thumbnail "looks like the user" with certainty. Present your assessment and let them decide.
+Use the Agent tool with this prompt structure (fill in the actual paths and concept brief):
 
-**Step 1:** Re-read the headshot(s) passed to Gemini with the `Read` tool. Read the Consensus Identity Description from `assets/headshots/index.md`.
+```
+You are a thumbnail evaluator. Read and follow the eval rubric at context/eval-rubric.md exactly.
 
-**Step 2: WRITTEN COMPARISON (mandatory — cannot skip).**
-Write 2-3 sentences describing what you observe. You MUST address:
+Your inputs:
+- Thumbnail to evaluate: {path to generated image}
+- Headshot(s) for comparison: {path(s) to headshot files used in generation}
+- Headshot index: assets/headshots/index.md
+- Concept brief:
+  {paste the concept brief from Phase 2 — visual metaphor, mood, color approach, headshot selection}
+- Context files: context/visual-psychology.md, context/visual-aesthetic.md
+- Learnings: learnings.md
 
-> "The identity description says: [paste the key features from index.md].
-> The generated face shows: [describe what you actually see — face shape, nose, jawline, glasses frame, beard, skin tone].
-> Match/mismatch: [specific observations about what matches and what doesn't]."
+Read every file listed above. Then follow the rubric to evaluate the thumbnail. Return ONLY the structured eval report in the format specified by the rubric.
+```
 
-This is not a checklist. You must DESCRIBE what you see in your own words. The act of writing forces observation — if you can't describe a mismatch, there probably isn't one. If you can, there is.
+**What you receive back:** A structured eval report with:
+- Tier 1 quality gates (pass/fail each, with reasoning)
+- If likeness fails: SOFT or HARD classification
+- If all gates pass: Tier 2 diagnostic scores (12 checkpoints, 1-3 each)
+- Total score and percentage
 
-**Step 3: ONE BINARY QUESTION.**
-"Would someone who knows the user recognize this person?"
-- YES → **PASS**
-- NO or UNCERTAIN → **FAIL**
+**What you do with it:**
+- Parse the gate results → if any failed, apply recovery strategies (table above)
+- Parse the score → 30+ present, 24-29 refine, <24 consider killing
+- Track cross-round state: if same gate fails twice → KILL (the subagent doesn't track this — you do)
+- Add `Running cost: ~${cost} / $2.50 limit` when presenting the report to the user
+- Present the full eval report to the user alongside the thumbnail
 
-**Step 4: If FAIL — classify:**
-- **SOFT FAIL:** Features are mostly right but something is off (slightly wrong face shape, one wrong feature like round vs rectangular glasses). Recoverable with a retry.
-- **HARD FAIL:** This is a different person. Wrong face structure entirely, or 2+ features completely wrong. Kill-track — do NOT pass `--reference` on retry (see recovery strategies below).
+**Important: The user always makes the final likeness call** — the subagent's likeness assessment is a filter, not a guarantee. Never claim a thumbnail "looks like the user" with certainty. Present the eval report and let them decide.
 
-**Gate 2: Photorealism**
+#### How to read the eval report
 
-Does it look like a real DSLR photograph? Check:
-- [ ] Skin texture: visible pores, stubble, natural imperfections (not smooth/plastic)
-- [ ] Lighting: natural falloff with clear bright/dark areas (not CG-uniform)
-- [ ] Materials: real fabric texture on clothing (not plastic/painted)
-- [ ] Depth of field: natural bokeh where present (not flat/artificial)
-
-**If it looks like a 3D render, illustration, or digital art: FAIL.** Add photorealism anchors and regenerate.
-
-**Gate 3: Technical Quality**
-
-- [ ] No extra or missing fingers
-- [ ] No warped or distorted hands
-- [ ] No garbled text (if text is present)
-- [ ] No asymmetric glasses (if present)
-- [ ] No doubled edges or ghost artifacts
-- [ ] No neck-body join artifacts
-- [ ] No ear distortion
-- [ ] No face distortion
-
-**If face distortion or 2+ artifacts: FAIL.** Simplify the prompt (remove the element causing issues) and regenerate. If text is garbled, remove text entirely.
-
-**Gate 4: Readability at Thumbnail Size**
-
-Mentally shrink the image to 320x180px (YouTube mobile). Ask:
-- [ ] Can you instantly tell what this image IS?
-- [ ] Is there one clear dominant subject?
-- [ ] Are there 3 or fewer distinct visual elements?
-
-**If you can't tell what it is at thumbnail size: FAIL.** Remove the weakest visual element and regenerate.
-
-#### Tier 2: Diagnostic Scoring (drives auto-refinement after gates pass)
-
-After all Tier 1 gates pass, score 12 checkpoints across 3 zoom levels. Each checkpoint: **STRONG (3)** / **ADEQUATE (2)** / **WEAK (1)**.
-
-**MACRO (does the whole image work?)**
-
-| # | Checkpoint | How to assess |
-|---|-----------|--------------|
-| M1 | **Emotional first impression** | Look at the image for 1 second. List 3 emotions. Compare to concept brief's intended mood. Match = 3. Partial = 2. Mismatch = 1. |
-| M2 | **Concept execution** | Compare generated image against brief point-by-point (pose, metaphor, lighting, key elements). All match = 3. Minor deviations = 2. Major deviation or missing key element = 1. |
-| M3 | **Composition & framing** | Clear dominant subject? Placement intentional (rule of thirds or symmetry)? Frame filled, no dead zones? All yes = 3. Mostly = 2. No = 1. |
-| M4 | **Scroll-stop / novelty** | Would this break a scroll in this niche? Completely different = 3. Somewhat = 2. Looks like everything else = 1. |
-
-**MESO (do the visual elements work together?)**
-
-| # | Checkpoint | How to assess |
-|---|-----------|--------------|
-| E1 | **Lighting → emotion** | Map light position/brightness/hardness/color to visual-psychology.md. Do all light factors support the intended mood? All = 3. Most = 2. Any contradict = 1. |
-| E2 | **Color → emotion** | Map hue/saturation/luminance to visual-psychology.md. Does palette support intended mood? All = 3. Mostly = 2. Wrong associations = 1. |
-| E3 | **Depth** | Check 3 factors from visual-aesthetic.md: brightness contrast, color contrast, sharpness contrast. All 3 present = 3. Two = 2. One or none = 1. (Monochromatic is valid if it serves the concept — per learnings.) |
-| E4 | **Balance** | Brightness distribution, color distribution, subject weight. All balanced (or deliberately imbalanced) = 3. Mostly = 2. Accidentally lopsided = 1. |
-
-**MICRO (are the details right?)**
-
-| # | Checkpoint | How to assess |
-|---|-----------|--------------|
-| D1 | **Skin & texture** | Visible pores, stubble, imperfections? Natural = 3. Slightly smooth = 2. Plastic/CG = 1. |
-| D2 | **Edge quality** | Clean transitions at body outline, clothing edges, head boundary? All clean = 3. Minor issues = 2. Obvious artifacts = 1. |
-| D3 | **Eyes & expression** | Correct expression per brief, realistic iris, appropriate catch lights? All good = 3. Minor issues = 2. Wrong expression or dead eyes = 1. |
-| D4 | **Background quality** | Clean, intentional, serves composition? Clean = 3. Minor issues = 2. Distracting = 1. |
-
-**Scoring & auto-refinement decision:**
-
-- **30-36 (83%+):** Present to the user — ready
-- **24-29 (67-80%):** Identify WEAK checkpoints → refine prompt targeting those → regenerate
-- **Below 24:** Consider killing the concept
-- **Priority:** Fix Macro WEAK first, then Meso, then Micro (high-impact before details)
-- **Concept-kill:** If the same checkpoint scores WEAK twice in a row → KILL (Gemini can't deliver it)
-
-**Context rule:** When scoring, consider combinations and learnings. A checkpoint that "fails" per individual psychology rules but works in the COMBINATION can still be ADEQUATE or STRONG. Reference specific learnings when overriding a rule.
-
-#### How to write the full evaluation
-
-After reading each generated image, first re-read the headshot(s) for comparison, then write:
+The subagent returns this format:
 
 ```
 QUALITY GATES (concept-{letter}/v{n}):
-  Likeness:      ✓/✗ — {feature-by-feature}
-  Photorealism:  ✓/✗ — {what looks real, what doesn't}
-  Technical:     ✓/✗ — {list any artifacts}
-  Readability:   ✓/✗ — {element count, thumbnail-size check}
-  → ALL PASS / FAIL on {which gate}
+  Likeness:      ✓/✗ — {written comparison}
+    [If ✗: SOFT FAIL / HARD FAIL]
+  Photorealism:  ✓/✗ — {assessment}
+  Technical:     ✓/✗ — {artifacts or "clean"}
+  Readability:   ✓/✗ — {element count, size check}
+  → ALL PASS / FAIL on {which gate(s)}
 
 DIAGNOSTIC SCORING (concept-{letter}/v{n}):
   MACRO:
@@ -408,9 +349,15 @@ DIAGNOSTIC SCORING (concept-{letter}/v{n}):
     D4 Background:           {3/2/1} — {clean, intentional}
 
   Total: {sum}/36 ({percentage}%)
-  → PRESENT / REFINE {weakest checkpoints} / KILL
-  Running cost: ~${cost} / $2.50 limit
 ```
+
+**Scoring & auto-refinement decision (your call, not the subagent's):**
+
+- **30-36 (83%+):** Present to the user — ready
+- **24-29 (67-80%):** Identify WEAK checkpoints from report → refine prompt targeting those → regenerate
+- **Below 24:** Consider killing the concept
+- **Priority:** Fix Macro WEAK first, then Meso, then Micro (high-impact before details)
+- **Concept-kill:** If the same checkpoint scores WEAK twice in a row → KILL (Gemini can't deliver it)
 
 #### Title Generation (runs after diagnostic, before presenting to the user)
 

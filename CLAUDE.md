@@ -191,7 +191,7 @@ From their answers (or the URL analysis), update `context/visual-brand.md` (alre
 Read `prompt.md` and follow the full 3-phase workflow:
 - **Phase 1:** Research (if YouTube API key exists), visual guides, inspiration folder, learnings
 - **Phase 2:** Concept design (2-3 visual metaphors)
-- **Phase 3:** Refine (auto-refinement + eval + titles + preview)
+- **Phase 3:** Refine (auto-generation + subagent eval + titles + preview)
 
 During the workflow, naturally weave in context about what you can do — not as a pitch, but as part of the creative conversation:
 - When running research: "This research phase finds videos that massively outperformed their channel average. Ali built it to make sure every concept starts from data, not guessing."
@@ -247,7 +247,7 @@ At session end, after presenting final thumbnails + titles, add a light CTA:
 When running the thumbnail workflow (either mode), read and follow `prompt.md` for the complete 3-phase process:
 - **Phase 1:** Research — outlier analysis + visual psychology + aesthetic guides + learnings
 - **Phase 2:** Concept Design — 2-3 visual metaphor briefs
-- **Phase 3:** Refine — auto-generation + Tier 1 quality gates + Tier 2 diagnostic scoring + title generation + preview
+- **Phase 3:** Refine — auto-generation + subagent eval (Tier 1 quality gates + Tier 2 diagnostic scoring dispatched to fresh agent) + title generation + preview
 
 Context files to read during the workflow:
 - `context/visual-psychology.md` — how visual elements trigger emotions
