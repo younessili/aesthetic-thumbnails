@@ -58,7 +58,7 @@ API keys, headshots, brand setup — then let's make my first thumbnail.
 |-------|-------------|
 | **Research** | Finds outlier thumbnails in your niche. Studies what's working, what's not, and where the visual gap is. |
 | **Design** | Proposes 2-3 visual metaphor concepts — each with mood, color palette, and headshot selection. Grounded in research + visual psychology & aesthetic. |
-| **Refine** | Generates photorealistic thumbnails, auto-evaluates against 12 quality checkpoints, pairs each with 3 title options, and live previews across YouTube contexts (desktop, mobile, TV). |
+| **Refine** | Generates photorealistic thumbnails, dispatches an independent subagent to evaluate against 4 quality gates + 12 diagnostic checkpoints (unbiased — the evaluator never sees the generation prompt), pairs each with 3 title options, and live previews across YouTube contexts (desktop, mobile, TV). |
 
 ```
 aesthetic-thumbnails/
@@ -77,6 +77,7 @@ aesthetic-thumbnails/
 ├── context/
 │   ├── visual-psychology.md   ← How visuals trigger emotions
 │   ├── visual-aesthetic.md    ← Depth, balance, simplicity, novelty
+│   ├── eval-rubric.md         ← Independent eval criteria for quality gates + scoring
 │   ├── title-guide.md         ← Title-thumbnail-video triangle
 │   └── visual-brand.md        ← Your brand (generated during setup)
 │
