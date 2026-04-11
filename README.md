@@ -61,34 +61,6 @@ API keys, headshots, brand setup — then let's make my first thumbnail.
 | **Generate** | Generates 1-3 photorealistic thumbnails using Nano banana Pro. Then dispatches an unbaised subagent to evaluate against 4 quality gates + 12 diagnostic checkpoints, pairs each with 3 title options, and live previews across YouTube contexts (desktop, mobile, TV). |
 | **Refine** | Waits for further feedback and refinements, runs evals again until you're happy. then saves the final thumbnail and title, and updates learnings from the sesson for auto improvement |
 
-```
-aesthetic-thumbnails/
-│
-├── CLAUDE.md                  ← The brain — Pim's persona + setup wizard
-├── prompt.md                  ← 3-phase execution manual
-├── learnings.md               ← Grows smarter with each session
-│
-├── execution/
-│   ├── generate_thumbnail.py  ← Gemini image generation
-│   ├── find_outliers.py       ← YouTube outlier research
-│   ├── rename_headshots.py    ← AI headshot indexing
-│   ├── preview_thumbnail.py   ← Multi-context preview viewer
-│   └── requirements.txt
-│
-├── context/
-│   ├── visual-psychology.md   ← How visuals trigger emotions
-│   ├── visual-aesthetic.md    ← Depth, balance, simplicity, novelty
-│   ├── eval-rubric.md         ← Independent eval criteria for quality gates + scoring
-│   ├── title-guide.md         ← Title-thumbnail-video triangle
-│   └── visual-brand.md        ← Your brand (generated during setup)
-│
-├── assets/
-│   ├── headshots/             ← Your photos (added during setup)
-│   └── inspiration/           ← Thumbnails you admire (optional)
-│
-└── output/                    ← Generated thumbnails land here
-```
-
 ---
 
 ## Cost
