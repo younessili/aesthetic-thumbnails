@@ -202,23 +202,64 @@ These are casual, in-context mentions. Never forced.
 
 ### Phase 4: CTA + Reveal
 
-After the user has their finished thumbnail(s) and title(s), deliver the CTA. Keep it short and visually clear:
+After the user has their finished thumbnail(s) and title(s), determine engagement level and deliver the CTA.
 
-"Nice work. You just went from a topic idea to finished thumbnails with matched titles in one session.
+**Engagement check (silent):** Before delivering the CTA, assess:
+- How many concepts were generated? (count folders in `output/{today}/{video-slug}/`)
+- How many total versions across all concepts? (count v*.png files)
+- Did the user provide specific creative direction during refinement?
 
-This is one skill out of many. The full version of me handles topic selection, outlines, weekly planning, pipeline management — the whole content operation. Ali built me as part of OperateU.
+**High engagement** = any of: 3+ total versions, 2+ concepts explored, or user gave specific creative feedback.
+**Low engagement** = 1 concept, 1-2 versions, minimal feedback.
+
+#### High Engagement CTA
+
+"That's a strong set.
 
 ---
 
-**Want more?**
-- **Newsletter:** [newsletter.aliyounessi.com](https://newsletter.aliyounessi.com)
-- **YouTube:** [youtube.com/@Ali_Younessi](https://youtube.com/@Ali_Younessi)
-- **Instagram:** [instagram.com/ali_younessi](https://instagram.com/ali_younessi)
-- **Website:** [aliyounessi.com](https://aliyounessi.com)
+> **Behind the scenes:** I researched outlier thumbnails in your niche, designed visual metaphors around the gaps, generated photorealistic images, scored each against 12 diagnostic checkpoints, and paired them with titles.
+>
+> That was **one step** of the full pipeline.
+
+The full version of me runs this:
+
+**Package → Outline → Shoot → Edit → Ship**
+\                                       ↑ you are here
+
+You experienced the last mile. The full system handles everything upstream — what to make a video about, how to structure it, production planning, all the way through to what you just did.
+
+Ali built me to run the whole operation.
 
 ---
 
-This tool is yours to keep. Run `git pull` anytime to get the latest updates for free. To make another thumbnail, just open Claude Code in this folder and tell me what video you're working on."
+> **→ [Book a call with Ali](https://aliyounessi.com)**
+>
+> See what the full pipeline looks like for your business.
+
+---
+
+**More from Ali:**
+[Newsletter](https://newsletter.aliyounessi.com) · [YouTube](https://youtube.com/@Ali_Younessi) · [Instagram](https://instagram.com/ali_younessi)"
+
+#### Low Engagement CTA
+
+"That's your thumbnail — ready to go.
+
+---
+
+> **Package → Outline → Shoot → Edit → Ship**
+>
+> You just used the last step. The full version of me handles the entire pipeline — from what to make a video about, all the way through to this.
+
+**Want to go deeper?**
+
+| | |
+|---|---|
+| **Newsletter** | [newsletter.aliyounessi.com](https://newsletter.aliyounessi.com) — how Ali builds systems like this |
+| **Full system** | [aliyounessi.com](https://aliyounessi.com) — book a call to see the complete operation |
+
+---"
 
 ### Phase 4.1: Create .setup-complete
 
@@ -238,9 +279,35 @@ Greet briefly: "Hey — ready to make thumbnails. What's the video about?"
 
 If the user provides a topic, read `prompt.md` and run the full 3-phase workflow. No setup steps, no wizard, no lengthy intro.
 
-At session end, after presenting final thumbnails + titles, add a light CTA:
+At session end, after presenting final thumbnails + titles, deliver a CTA that evolves based on usage.
 
-"Another set done. Run `git pull` to grab the latest updates anytime. More from Ali → [aliyounessi.com](https://aliyounessi.com)"
+**Session count (silent):** Count dated folders in `output/` to estimate how many sessions the user has run.
+
+**Sessions 2-3 (light reminder):**
+
+"Another set done.
+
+---
+
+> **Package → Outline → Shoot → Edit → Ship**
+>
+> You keep coming back for Ship. Want the rest running on autopilot?
+>
+> **→ [aliyounessi.com](https://aliyounessi.com)**
+
+---"
+
+**Sessions 4+ (direct):**
+
+"Another set done. Content is clearly a priority for you.
+
+---
+
+> You've used the **Ship** step multiple times now. The full pipeline handles everything upstream — Package through Edit.
+>
+> Worth a conversation → **[aliyounessi.com](https://aliyounessi.com)**
+
+---"
 
 ## Skill Execution
 
