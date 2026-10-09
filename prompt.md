@@ -1,6 +1,6 @@
 # YouTube Thumbnail Generator — V2
 
-Generate original YouTube thumbnails using Gemini 3 Pro Image Preview (Nano Banana Pro). V2 uses a 3-phase creative workflow: Research outliers, design concepts as visual metaphors, then iteratively refine until the thumbnail is right.
+Generate original YouTube thumbnails using the configured image model (default: Nano Banana Pro via Gemini — run `.venv/bin/python execution/generate_thumbnail.py --list-models` for the others). V2 uses a 3-phase creative workflow: Research outliers, design concepts as visual metaphors, then iteratively refine until the thumbnail is right.
 
 ---
 
@@ -236,7 +236,7 @@ Each concept goes through up to 3 rounds of automatic generation and evaluation.
 
 **Communicating during auto-refinement:** When a gate fails and you need to regenerate, show the user the eval report and tell them what you're doing. Example: "Concept C didn't pass the likeness gate — the evaluator flagged the jawline as too narrow. I'm regenerating with stronger identity instructions." The user should never wonder why you're generating again.
 
-**Cost limit: $2.50 max per thumbnail session** (~$0.134/generation, so ~18 generations max). Track running cost across all concepts. Stop generating if approaching the limit.
+**Cost limit: $2.50 max per thumbnail session** (cost depends on the model — each command prints its estimate; ~$0.134/generation on the default, so ~18 generations max). Track running cost across all concepts. Stop generating if approaching the limit.
 
 #### The loop (per concept):
 
@@ -489,6 +489,28 @@ Every prompt should include these photorealism anchors from the start (don't wai
   --output "output/{today}/{video-slug}/concept-{letter}/v{n}.png"
 ```
 
+**Choosing a model:** All commands take `--model` (default: `$IMAGE_MODEL` from `.env`, else `gemini`). Keep one model per concept across rounds so eval results stay comparable. Every command prints its estimated cost; add it to the running total. Options: `gemini`, `nano-banana-pro`, `nano-banana-2.1`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`, `flux-3`, `ideogram-4.5`. Everything except `gemini` needs `FAL_KEY`. Notes:
+- `gpt-image-2.5-*` (16 images) and `flux-3` (10 images) can take more headshots than Gemini — passing 4-8 varied headshots is fine.
+- `ideogram-4.5` treats Image 1 as a photo to edit, not a reference. Only use it for generation when Image 1 is a real frame you want to build on.
+
+### Fine edits on an approved image (mix and match)
+
+When the user approves a thumbnail (or provides a real video frame) and wants ONE region changed, don't regenerate the whole image. Use `edit_image.py` with a model that preserves pixels outside a mask — this can be a different model than the one that generated the image:
+
+```bash
+.venv/bin/python execution/edit_image.py \
+  --model ideogram-4.5 \
+  --source "output/{today}/{video-slug}/concept-{letter}/v{n}.png" \
+  --mask "output/{today}/{video-slug}/concept-{letter}/mask-{what}.png" \
+  --prompt "{what should change inside the white area}" \
+  --output "output/{today}/{video-slug}/concept-{letter}/v{n+1}.png"
+```
+
+- **Mask:** same size as the source, WHITE = change, BLACK = keep. Draw it with PIL (a rectangle or ellipse around the region is enough).
+- **Mask-aware models:** `ideogram-4.5` (Precise Edit), `flux-3` (mask becomes a bounding box), `gpt-image-2.5-*` (mask). Gemini / Nano Banana ignore masks and regenerate every pixel.
+- The script prints **drift** outside the mask: PSNR above ~40 dB = untouched, below ~30 dB = visibly changed. If drift is high, tell the user and try another model.
+- For pure text changes, compositing with PIL is still the zero-drift option (see learnings).
+
 ### Critical rules
 
 - Write a NEW complete prompt every round — Gemini doesn't remember previous calls
@@ -573,11 +595,12 @@ These apply to ALL concepts regardless of creative direction:
 
 | Issue | Fix |
 |-------|-----|
-| No image returned / `candidates` is None | Simplify the prompt. Reduce the number of attached images (max 2-3 total). Try again — API calls can intermittently fail. |
+| No image returned / `candidates` is None | Simplify the prompt. Reduce the number of attached images (max 2-3 total on `gemini`). Transient 429/5xx errors are retried automatically with backoff. |
 | Person doesn't look like the headshot | Add more explicit instruction: "Use the exact likeness from the attached reference photo including facial hair and glasses." Try passing 2 headshots for more reference angles. |
 | Text is garbled or unreadable | Gemini's text rendering isn't perfect. Consider generating without text and adding it in post-production (Figma, Canva). |
 | Wrong aspect ratio | The script sets 16:9 automatically. If the output looks wrong, check the saved file dimensions. |
 | API error or timeout | Check that GEMINI_API_KEY is set in `.env`. Try again — transient 500 errors happen. |
 | find_outliers.py returns no results | Lower `--min-outlier-score` to 2.0. Try different niche search terms. Check that YOUTUBE_API_KEY is set. If API quota is exhausted, proceed to Phase 2 using curated inspiration only. |
 | YouTube API quota exhausted (403) | The script exits immediately on quota errors. Wait until tomorrow (resets daily) or proceed without Phase 1 research — it's valuable but not blocking. |
-| Too many images cause generation failure | Gemini has limits on input images. Use max 1-2 headshots + 1 reference. Don't pass `--examples` alongside `--reference`. |
+| Too many images cause generation failure | On `gemini`, use max 1-2 headshots + 1 reference and don't pass `--examples` alongside `--reference`. Other models take more (`--list-models` shows each limit); extra images are dropped with a warning. |
+| `FAL_KEY not set` | Every model except `gemini` runs through fal.ai. Add `FAL_KEY=` to `.env` (fal.ai/dashboard/keys), or use `--model gemini`. |

@@ -326,7 +326,7 @@ Context files to read during the workflow:
 ## Cost Awareness
 
 Track Gemini API cost during each session:
-- ~$0.134 per thumbnail generation
+- ~$0.134 per thumbnail generation on the default model (`gemini`); other models print their own estimate after each call — use that number
 - Typical session: $0.40-$0.60
 - Warn user when approaching $2.50
 - Show running total when presenting results
