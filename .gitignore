@@ -10,3 +10,11 @@ _plans/
 SPEC.md
 context/visual-brand.md
 learnings.md
+
+# Personal headshots — never publish (keep the folder itself)
+assets/headshots/*
+!assets/headshots/.gitkeep
+
+# Inspiration thumbnails are other creators' work — keep them local (keep the folder itself)
+assets/inspiration/*
+!assets/inspiration/.gitkeep

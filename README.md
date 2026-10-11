@@ -46,7 +46,7 @@ API keys, headshots, brand setup — then let's make my first thumbnail.
 > [!TIP]
 > That's the whole setup. Pim (the creative director built into this tool) handles cloning, installing, configuring, and your first thumbnail session.
 
-**Requirements:** [Python 3.10+](https://python.org) · [Claude Code](https://claude.ai/download) · [Gemini API key](https://ai.google.dev) (free)
+**Requirements:** [Python 3.10+](https://python.org) · [Claude Code](https://claude.ai/download) · [Gemini API key](https://ai.google.dev) (free) · a few photos of yourself
 
 ---
 
@@ -56,10 +56,38 @@ API keys, headshots, brand setup — then let's make my first thumbnail.
 
 | Phase | What happens |
 |-------|-------------|
-| **Research** | Finds outlier thumbnails in your niche. Studies what's working, what's not, and where the visual gap is. |
-| **Design** | Proposes 3 original visual metaphor concepts — each with mood, color palette, and headshot selection. Grounded in research, visual psychology and aesthetic. |
-| **Generate** | Generates 1-3 photorealistic thumbnails using Nano banana Pro. Then dispatches an unbaised subagent to evaluate against 4 quality gates + 12 diagnostic checkpoints, pairs each with 3 title options, and live previews across YouTube contexts (desktop, mobile, TV). |
-| **Refine** | Waits for further feedback and refinements, runs evals again until you're happy. then saves the final thumbnail and title, and updates learnings from the sesson for auto improvement |
+| **Research** | Studies the thumbnails you like (your inspiration folder) and, optionally, outlier thumbnails in your niche — what's working, what's not, and where the visual gap is. |
+| **Design** | Proposes 2-3 original visual metaphor concepts — each with mood, color palette, headshot selection and style references. Grounded in research, visual psychology and aesthetic. |
+| **Generate** | Generates photorealistic thumbnails with the image model you choose. Then dispatches an unbiased subagent to evaluate against 4 quality gates + 12 diagnostic checkpoints, pairs each with 3 title options, and live previews across YouTube contexts (desktop, mobile, TV). |
+| **Refine** | Waits for your feedback, runs evals again until you're happy, then saves the final thumbnail and title and updates learnings from the session for auto-improvement. |
+
+---
+
+## Optional Upgrades
+
+The core only needs a Gemini key and your headshots. Each of these makes it better, and Pim adapts to whatever you've set up:
+
+| Upgrade | How to turn it on | What you get |
+|---------|------------------|--------------|
+| **Your style** | Drop 3-10 thumbnails you love into `assets/inspiration/` | Pim studies them for concepts and passes the best matches to the image model as style references — the biggest step toward thumbnails that look designed but still real. |
+| **More image models** | Add a [fal.ai](https://fal.ai/dashboard/keys) key as `FAL_KEY` in `.env` | GPT Image 2.5 (best text), Nano Banana 2.1 (cheapest), FLUX 3 — set a default with `IMAGE_MODEL` or ask Pim to switch. |
+| **Outlier research** | Add a free YouTube Data API key as `YOUTUBE_API_KEY` in `.env` | Finds videos in your niche that massively outperformed their channel, so concepts start from data. |
+
+Your headshots and inspiration thumbnails are gitignored — they never leave your machine except as API calls to the image model.
+
+---
+
+## Image Models
+
+| Model | Key | ~Cost / image | Good at |
+|-------|-----|--------------|---------|
+| Nano Banana Pro (`gemini`, default) | `GEMINI_API_KEY` | $0.134 | Strong all-rounder, realistic. Occasionally drifts on likeness. |
+| GPT Image 2.5 Sunburst / Flare | `FAL_KEY` | $0.064 | Cleanest text and layout, strong likeness. |
+| Nano Banana 2.1 | `FAL_KEY` | ~$0.05 | Realistic and cheap. |
+| Nano Banana Pro via fal (`nano-banana-pro`) | `FAL_KEY` | $0.15 | Same as `gemini`, billed through fal. |
+| FLUX 3 | `FAL_KEY` | $0.10 | Very photographic skin; garbles small text. |
+
+Run `.venv/bin/python execution/generate_thumbnail.py --list-models` for the full list with image limits.
 
 ---
 
@@ -67,10 +95,10 @@ API keys, headshots, brand setup — then let's make my first thumbnail.
 
 | Operation | Estimated Cost |
 |-----------|---------------|
-| Thumbnail generation | ~$0.134 per image |
+| Thumbnail generation | ~$0.05–0.15 per image depending on the model |
 | Outlier research | Free (YouTube API) |
 | Headshot analysis | ~$0.002 per image |
-| **Typical session** | **$1.0 - $2.0** |
+| **Typical session** | **$0.50 - $2.00** |
 
 All API keys stay local — stored in your `.env` file, never uploaded.
 

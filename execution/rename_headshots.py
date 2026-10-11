@@ -44,7 +44,7 @@ from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 from google import genai
 from google.genai import types
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 # ---------------------------------------------------------------------------
@@ -212,7 +212,7 @@ def deduplicate_name(name, extension, directory, used_names):
 
 def analyze_headshot_for_rename(client, image_path):
     """Send a headshot to Gemini and get a descriptive filename."""
-    img = Image.open(image_path)
+    img = ImageOps.exif_transpose(Image.open(image_path))
     img = resize_for_analysis(img)
 
     response = client.models.generate_content(
@@ -233,7 +233,7 @@ def analyze_headshot_for_rename(client, image_path):
 
 def analyze_headshot_for_index(client, image_path):
     """Send a headshot to Gemini and get structured metadata for the index."""
-    img = Image.open(image_path)
+    img = ImageOps.exif_transpose(Image.open(image_path))
     img = resize_for_analysis(img)
 
     response = client.models.generate_content(
@@ -258,7 +258,7 @@ def analyze_headshot_for_index(client, image_path):
 
 def analyze_headshot_for_identity(client, image_path):
     """Analyze a single headshot for permanent physical features only."""
-    img = Image.open(image_path)
+    img = ImageOps.exif_transpose(Image.open(image_path))
     img = resize_for_analysis(img)
 
     response = client.models.generate_content(

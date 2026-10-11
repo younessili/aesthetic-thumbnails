@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """
-Generate a YouTube thumbnail using Gemini 3 Pro Image Preview (Nano Banana Pro).
+Generate a YouTube thumbnail with any registered image model (see image_models.py).
 
 Usage:
     python3 generate_thumbnail.py \
         --headshot path/to/headshot.png \
         --prompt "detailed prompt text" \
         --output path/to/output.png
+
+    Pick a model (default: $IMAGE_MODEL, else "gemini" = Nano Banana Pro):
+    python3 generate_thumbnail.py --model flux-3 \
+        --headshot a.jpg b.jpg c.jpg \
+        --prompt "..." --output path/to/output.png
 
     With reference image (for iteration):
     python3 generate_thumbnail.py \
@@ -15,38 +20,37 @@ Usage:
         --prompt "edit instruction" \
         --output path/to/output-v2.png
 
-    With example thumbnails from high-performing videos:
+    With style references (thumbnails the user likes, e.g. from assets/inspiration/):
     python3 generate_thumbnail.py \
         --headshot path/to/headshot.png \
         --examples path/to/example1.jpg path/to/example2.jpg \
         --prompt "detailed prompt text" \
         --output path/to/output.png
 
+    List models, costs and limits:
+    python3 generate_thumbnail.py --list-models
+
 Environment:
-    GEMINI_API_KEY must be set.
+    GEMINI_API_KEY for the "gemini" model, FAL_KEY for every other model.
 """
 
 import argparse
 import os
 import sys
-from pathlib import Path
 
 from dotenv import load_dotenv, find_dotenv
-from google import genai
-from google.genai import types
-from PIL import Image
 
-# Enable AVIF support — YouTube thumbnails are often AVIF
-try:
-    import pillow_avif  # noqa: F401
-except ImportError:
-    pass
+from image_models import MODELS, RESOLUTIONS, print_models, run
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Generate YouTube thumbnail via Gemini")
+    parser = argparse.ArgumentParser(description="Generate YouTube thumbnail")
     parser.add_argument(
-        "--headshot", required=True, nargs="+",
+        "--model", default=None,
+        help=f"Image model: {', '.join(MODELS)} (default: $IMAGE_MODEL or 'gemini')"
+    )
+    parser.add_argument(
+        "--headshot", nargs="+",
         help="Path(s) to headshot reference image(s)"
     )
     parser.add_argument(
@@ -55,138 +59,89 @@ def parse_args():
     )
     parser.add_argument(
         "--examples", nargs="*", default=[],
-        help="Path(s) to example thumbnails from high-performing videos (style inspiration)"
+        help="Path(s) to thumbnails whose style to follow (e.g. from assets/inspiration/)"
     )
     parser.add_argument(
-        "--prompt", required=True,
+        "--prompt",
         help="Detailed prompt for thumbnail generation"
     )
     parser.add_argument(
-        "--output", required=True,
+        "--output",
         help="Output file path for the generated thumbnail"
     )
-    return parser.parse_args()
-
-
-def validate_image_file(path):
-    """Check that a file is actually an image, not HTML or other junk from a failed download."""
-    p = Path(path)
-    if not p.exists():
-        print(f"Error: File not found: {path}", file=sys.stderr)
-        sys.exit(1)
-    # Read first bytes to check for HTML (common when sites block hotlinking)
-    with open(p, "rb") as f:
-        header = f.read(256)
-    if b"<!DOCTYPE" in header or b"<html" in header or b"<HTML" in header:
-        print(
-            f"Error: '{path}' is an HTML file, not an image. "
-            f"The download URL likely returned a web page instead of the actual image. "
-            f"Try downloading from a different source.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    if len(header) < 8:
-        print(f"Error: '{path}' is too small to be a valid image ({len(header)} bytes).", file=sys.stderr)
-        sys.exit(1)
-
-
-def resize_if_needed(img, max_edge=2048):
-    """Resize image if larger than max_edge on any side."""
-    w, h = img.size
-    if max(w, h) > max_edge:
-        ratio = max_edge / max(w, h)
-        new_size = (int(w * ratio), int(h * ratio))
-        return img.resize(new_size, Image.LANCZOS)
-    return img
+    parser.add_argument(
+        "--resolution", default="2k", choices=RESOLUTIONS,
+        help="Output resolution tier (default: 2k)"
+    )
+    parser.add_argument(
+        "--quality", default=None,
+        help="Quality tier for models that have one (GPT Image: low/medium/high/xhigh/max)"
+    )
+    parser.add_argument(
+        "--seed", type=int, default=None,
+        help="Seed, for models that support it"
+    )
+    parser.add_argument(
+        "--aspect-ratio", default="16:9",
+        help="Aspect ratio (default: 16:9)"
+    )
+    parser.add_argument(
+        "--list-models", action="store_true",
+        help="List available models and exit"
+    )
+    args = parser.parse_args()
+    if not args.list_models:
+        missing = [f for f in ("headshot", "prompt", "output") if not getattr(args, f)]
+        if missing:
+            parser.error("the following arguments are required: " + ", ".join(f"--{m}" for m in missing))
+    return args
 
 
 def main():
     args = parse_args()
 
+    if args.list_models:
+        print_models()
+        return
+
     load_dotenv(find_dotenv(usecwd=True))
+    model = args.model or os.environ.get("IMAGE_MODEL", "gemini")
 
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("Error: GEMINI_API_KEY environment variable not set", file=sys.stderr)
-        sys.exit(1)
-
-    client = genai.Client(api_key=api_key)
-
-    # Build contents: prompt text + headshot images + reference images + examples
-    #
-    # Image order in contents:
+    # Image order sent to the model:
     #   1. Headshot(s)
     #   2. Reference images (logos, icons, previous thumbnails)
-    #   3. Example thumbnails (high-performing videos for style inspiration)
+    #   3. Style references (thumbnails the user likes)
     #
     # The prompt should reference these by position (Image 1, Image 2, etc.)
-    # Examples are appended last and prefixed with a system note so Gemini
-    # knows they're style references, not elements to reproduce exactly.
+    # Style references are appended last, with a note so the model copies
+    # their style but not their content.
 
     prompt = args.prompt
 
     if args.examples:
         prompt += (
-            "\n\nSTYLE EXAMPLES:\n"
-            "The final attached images are thumbnails from high-performing YouTube videos "
-            "on this topic. Study their composition, color usage, text placement, and visual "
-            "hierarchy — then apply those patterns to create an ORIGINAL thumbnail. "
-            "Do NOT copy these thumbnails. Use them as inspiration for what works."
+            f"\n\nSTYLE REFERENCES:\n"
+            f"The last {len(args.examples)} attached image(s) are thumbnails whose style to follow. "
+            "Use them ONLY as a style reference: how real the photography feels, lighting and "
+            "contrast, how big the face is, typography (font, weight, color, placement) and "
+            "how few elements they use. Do NOT copy their people, their words, their logos, or "
+            "the small duration badge in their corner. Create an ORIGINAL thumbnail."
         )
 
-    contents = [prompt]
+    images = list(args.headshot) + list(args.reference) + list(args.examples)
 
-    for headshot_path in args.headshot:
-        validate_image_file(headshot_path)
-        img = resize_if_needed(Image.open(headshot_path))
-        contents.append(img)
-
-    for ref_path in args.reference:
-        validate_image_file(ref_path)
-        img = resize_if_needed(Image.open(ref_path))
-        contents.append(img)
-
-    for ex_path in args.examples:
-        validate_image_file(ex_path)
-        img = resize_if_needed(Image.open(ex_path))
-        contents.append(img)
-
-    # Generate
-    response = client.models.generate_content(
-        model=os.environ.get("GEMINI_IMAGE_MODEL", "gemini-3-pro-image-preview"),
-        contents=contents,
-        config=types.GenerateContentConfig(
-            response_modalities=["TEXT", "IMAGE"],
-            image_config=types.ImageConfig(
-                aspect_ratio="16:9",
-            ),
-        ),
+    result = run(
+        model, prompt, images, args.output,
+        aspect_ratio=args.aspect_ratio, resolution=args.resolution,
+        quality=args.quality, seed=args.seed,
     )
 
-    # Process response
-    output_path = Path(args.output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    image_saved = False
-    text_response = ""
-
-    for part in response.candidates[0].content.parts:
-        if hasattr(part, "inline_data") and part.inline_data is not None:
-            img = part.as_image()
-            img.save(str(output_path))
-            image_saved = True
-            print(f"Thumbnail saved to: {output_path}")
-        elif hasattr(part, "text") and part.text is not None:
-            text_response += part.text
-
-    if text_response:
-        print(f"\nModel notes: {text_response}")
-
-    if not image_saved:
-        print("Error: No image was generated in the response.", file=sys.stderr)
-        if text_response:
-            print(f"Response text: {text_response}", file=sys.stderr)
-        sys.exit(1)
+    for warning in result.warnings:
+        print(f"Warning: {warning}", file=sys.stderr)
+    print(f"Thumbnail saved to: {result.path}")
+    print(f"Model: {model} · estimated cost: ~${result.est_cost:.3f}")
+    if result.notes:
+        print(f"\nModel notes: {result.notes}")
 
 
 if __name__ == "__main__":
