@@ -14,20 +14,14 @@ fal.ai (via FAL_KEY), so trying a new model means adding one entry to MODELS.
         output="output/x/v1.png",
     )
 
-Image conventions shared by all models:
-  - `images` are local paths, sent in order. Prompts refer to them by
-    position ("Image 1", "Image 2", ...). For edits, images[0] is the source.
-  - `mask` is a local image where WHITE = area to change, BLACK = keep.
-    It's translated to each model's own convention (alpha, inverted, or a
-    bounding box). Models without mask support regenerate the whole image —
-    a warning is printed.
+`images` are local paths, sent in order. Prompts refer to them by position
+("Image 1", "Image 2", ...).
 
 Run `python3 execution/image_models.py` to list models, endpoints and costs.
 """
 
 import io
 import json
-import math
 import os
 import sys
 import tempfile
@@ -37,7 +31,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from dotenv import load_dotenv, find_dotenv
-from PIL import Image, ImageChops, ImageOps, ImageStat
+from PIL import Image, ImageOps
 
 # Enable AVIF support — YouTube thumbnails are often AVIF
 try:
@@ -97,17 +91,6 @@ def resize_if_needed(img, max_edge=2048):
     return img
 
 
-def tier_for_source(path):
-    """Pick the resolution tier closest to a source image, so edits don't downscale it."""
-    w, h = open_image(path).size
-    mp = w * h / 1_000_000
-    if mp <= 1.3:
-        return "1k"
-    if mp <= 4.5:
-        return "2k"
-    return "4k"
-
-
 def dims_for(aspect_ratio, resolution):
     """Width/height for an aspect ratio at a resolution tier, rounded to multiples of 16."""
     if aspect_ratio == "auto":
@@ -119,60 +102,6 @@ def dims_for(aspect_ratio, resolution):
     else:
         w, h = long_edge * aw / ah, long_edge
     return {"width": int(round(w / 16) * 16), "height": int(round(h / 16) * 16)}
-
-
-def load_mask(mask_path, source_path):
-    """Load a WHITE=edit mask as an 'L' image matching the source size."""
-    src_size = open_image(source_path).size
-    mask = Image.open(mask_path).convert("L")
-    if mask.size != src_size:
-        mask = mask.resize(src_size, Image.NEAREST)
-    return mask.point(lambda v: 255 if v >= 128 else 0)
-
-
-def mask_bbox_1000(mask):
-    """Bounding box of the white area as [y_min, x_min, y_max, x_max] on a 0-1000 grid (FLUX 3 format)."""
-    box = mask.getbbox()
-    if box is None:
-        raise SystemExit("Error: mask is entirely black — nothing to edit.")
-    x0, y0, x1, y1 = box
-    w, h = mask.size
-    return [round(y0 / h * 1000), round(x0 / w * 1000), round(y1 / h * 1000), round(x1 / w * 1000)]
-
-
-def drift_report(source_path, result_path, mask_path=None):
-    """
-    How much did the model change pixels it was supposed to leave alone?
-
-    Compares result to source outside the mask (or across the whole image if no
-    mask). Returns mean absolute difference (0-255) and PSNR in dB. PSNR above
-    ~40 dB is visually identical; below ~30 dB the change is noticeable.
-    """
-    src = open_image(source_path).convert("RGB")
-    out = Image.open(result_path).convert("RGB")
-    resized = out.size != src.size
-    if resized:
-        out = out.resize(src.size, Image.LANCZOS)
-
-    keep = None
-    if mask_path:
-        keep = ImageOps.invert(load_mask(mask_path, source_path))
-        if keep.getbbox() is None:
-            return None
-
-    diff = ImageChops.difference(src, out)
-    stat = ImageStat.Stat(diff, mask=keep)
-    mae = sum(stat.mean) / 3
-    mse = sum(r * r for r in stat.rms) / 3
-    psnr = float("inf") if mse == 0 else 20 * math.log10(255 / math.sqrt(mse))
-    return {
-        "region": "outside mask" if mask_path else "whole image",
-        "mean_abs_diff": round(mae, 2),
-        "psnr_db": round(psnr, 2) if psnr != float("inf") else "inf",
-        "result_resized_to_source": resized,
-        "source_size": list(src.size),
-        "result_size": list(Image.open(result_path).size),
-    }
 
 
 def save_image_bytes(data, output_path):
@@ -193,26 +122,12 @@ def save_image_bytes(data, output_path):
 # fal.ai backend
 # ---------------------------------------------------------------------------
 
-def _fal_upload(path, keep_full_res=False):
-    """Upload a local image to fal storage and return its URL."""
+def _fal_upload(path):
+    """Upload a local image to fal storage (upright, as PNG, capped at 2048px) and return its URL."""
     import fal_client
 
     validate_image_file(path)
-    raw = Image.open(path)
-    if keep_full_res and raw.format in ("PNG", "JPEG", "WEBP") and raw.getexif().get(0x0112, 1) == 1:
-        return fal_client.upload_file(path)
-    # Re-encode upright as PNG (handles AVIF and EXIF rotation) and cap size for references
-    img = ImageOps.exif_transpose(raw)
-    if not keep_full_res:
-        img = resize_if_needed(img)
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-        img.save(tmp.name, "PNG")
-        return fal_client.upload_file(tmp.name)
-
-
-def _fal_upload_pil(img):
-    import fal_client
-
+    img = resize_if_needed(open_image(path))
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
         img.save(tmp.name, "PNG")
         return fal_client.upload_file(tmp.name)
@@ -260,8 +175,7 @@ def _download(url):
 # ---------------------------------------------------------------------------
 #
 # build(ctx) returns (endpoint, arguments) for a fal model. ctx holds:
-#   prompt, image_urls, mask (PIL 'L', WHITE=edit, or None), aspect_ratio,
-#   resolution, quality, seed, is_edit (True when images were given)
+#   prompt, image_urls, aspect_ratio, resolution, quality, seed
 
 @dataclass
 class ModelSpec:
@@ -269,7 +183,6 @@ class ModelSpec:
     label: str
     backend: str                       # "gemini" or "fal"
     max_images: int
-    mask_support: str                  # "none", "alpha", "inverted", "bbox"
     cost: Callable[[str, Optional[str]], float]   # (resolution, quality) -> est USD
     build: Optional[Callable[[dict], tuple]] = None
     default_quality: Optional[str] = None
@@ -302,14 +215,7 @@ def _build_gpt_image(tier):
         }
         if ctx["image_urls"]:
             args["image_urls"] = ctx["image_urls"]
-            # Edits keep the source geometry; generation-from-references uses the requested ratio
-            args["image_size"] = "auto" if ctx["mask"] is not None or ctx["aspect_ratio"] == "auto" \
-                else dims_for(ctx["aspect_ratio"], ctx["resolution"])
-            if ctx["mask"] is not None:
-                # OpenAI convention: transparent pixels = area to edit
-                src = open_image(ctx["source_path"]).convert("RGBA")
-                src.putalpha(ImageOps.invert(ctx["mask"]))
-                args["mask_url"] = _fal_upload_pil(src)
+            args["image_size"] = dims_for(ctx["aspect_ratio"], ctx["resolution"])
             return f"openai/gpt-image-2.5/{tier}/edit", args
         args["image_size"] = dims_for(ctx["aspect_ratio"], ctx["resolution"])
         return f"openai/gpt-image-2.5/{tier}/text-to-image", args
@@ -317,16 +223,8 @@ def _build_gpt_image(tier):
 
 
 def _build_flux3(ctx):
-    prompt = ctx["prompt"]
-    if ctx["mask"] is not None:
-        box = mask_bbox_1000(ctx["mask"])
-        rows = [{"id": "edit_1", "from": None, "src_bbox": None, "tgt_bbox": box, "desc": ctx["prompt"]}]
-        prompt = (
-            f"In <ref_image_0>, inside the region <edit_1>: {ctx['prompt']} "
-            f"Keep everything outside <edit_1> exactly unchanged. {json.dumps(rows)}"
-        )
     args = {
-        "prompt": prompt,
+        "prompt": ctx["prompt"],
         "aspect_ratio": ctx["aspect_ratio"],
         "resolution": ctx["resolution"],
         "output_format": "png",
@@ -335,50 +233,6 @@ def _build_flux3(ctx):
         args["image_urls"] = ctx["image_urls"]
         return "blackforestlabs/flux-3/edit-image", args
     return "blackforestlabs/flux-3/text-to-image", args
-
-
-# Ideogram only accepts specific sizes; these cover the ratios thumbnails use (max 2K)
-IDEOGRAM_SIZES = {
-    ("16:9", "1k"): (1280, 720), ("16:9", "2k"): (2560, 1440),
-    ("9:16", "1k"): (720, 1280), ("9:16", "2k"): (1440, 2560),
-    ("1:1", "1k"): (1024, 1024), ("1:1", "2k"): (2048, 2048),
-    ("4:3", "1k"): (1152, 864), ("3:4", "1k"): (864, 1152),
-}
-
-
-def _ideogram_size(aspect_ratio, resolution):
-    tier = "2k" if resolution == "4k" else resolution
-    size = IDEOGRAM_SIZES.get((aspect_ratio, tier)) or IDEOGRAM_SIZES.get((aspect_ratio, "1k"))
-    if size is None:
-        return "landscape_16_9"
-    return {"width": size[0], "height": size[1]}
-
-
-def _build_ideogram45(ctx):
-    if not ctx["image_urls"]:
-        args = {"prompt": ctx["prompt"], "quality": ctx["quality"],
-                "image_size": _ideogram_size(ctx["aspect_ratio"], ctx["resolution"])}
-        if ctx["seed"] is not None:
-            args["seed"] = ctx["seed"]
-        return "ideogram/v4.5", args
-
-    max_refs = 3 if ctx["mask"] is not None else 4
-    args = {
-        "prompt": ctx["prompt"],
-        "image_url": ctx["image_urls"][0],
-        "reference_image_urls": ctx["image_urls"][1:1 + max_refs],
-        # High precision = Precise Edit, restores pixels outside the change
-        "edit_precision": "high" if ctx["mask"] is not None else "regular",
-        "quality": ctx["quality"],
-    }
-    if ctx["mask"] is not None:
-        # Ideogram convention: black = edit, white = keep
-        args["mask_url"] = _fal_upload_pil(ImageOps.invert(ctx["mask"]))
-    elif ctx["aspect_ratio"] != "auto":
-        args["image_size"] = _ideogram_size(ctx["aspect_ratio"], ctx["resolution"])
-    if ctx["seed"] is not None:
-        args["seed"] = ctx["seed"]
-    return "ideogram/v4.5/edit", args
 
 
 def _flux3_cost(res, _q):
@@ -393,49 +247,41 @@ def _gpt_cost(res, q):
 MODELS = {
     "gemini": ModelSpec(
         key="gemini", label="Nano Banana Pro (Gemini direct)", backend="gemini",
-        max_images=14, mask_support="none",
+        max_images=14,
         cost=lambda res, q: 0.24 if res == "4k" else 0.134,
-        notes="Default. Uses GEMINI_API_KEY. Regenerates every pixel, even for small edits.",
+        notes="Default. Uses GEMINI_API_KEY.",
     ),
     "nano-banana-pro": ModelSpec(
         key="nano-banana-pro", label="Nano Banana Pro (fal)", backend="fal",
-        max_images=14, mask_support="none",
+        max_images=14,
         cost=lambda res, q: 0.30 if res == "4k" else 0.15,
         build=_build_nano_banana("fal-ai/nano-banana-pro", "fal-ai/nano-banana-pro/edit"),
         notes="Same model as 'gemini', billed through fal.",
     ),
     "nano-banana-2.1": ModelSpec(
         key="nano-banana-2.1", label="Nano Banana 2.1", backend="fal",
-        max_images=14, mask_support="none",
+        max_images=14,
         cost=lambda res, q: 0.08 if res == "4k" else 0.05,   # token-based, rough estimate
         build=_build_nano_banana("google/nano-banana-2.1", "google/nano-banana-2.1/edit"),
         notes="Released 2026-10-06. Token-based pricing; cost is a rough estimate.",
     ),
     "gpt-image-2.5-flare": ModelSpec(
         key="gpt-image-2.5-flare", label="GPT Image 2.5 Flare", backend="fal",
-        max_images=16, mask_support="alpha", default_quality="high",
+        max_images=16, default_quality="high",
         cost=_gpt_cost, build=_build_gpt_image("flare"),
         notes="Faster GPT Image 2.5 tier. Quality: low/medium/high/xhigh/max.",
     ),
     "gpt-image-2.5-sunburst": ModelSpec(
         key="gpt-image-2.5-sunburst", label="GPT Image 2.5 Sunburst", backend="fal",
-        max_images=16, mask_support="alpha", default_quality="high",
+        max_images=16, default_quality="high",
         cost=_gpt_cost, build=_build_gpt_image("sunburst"),
         notes="Precision GPT Image 2.5 tier, slower. Same pricing as Flare.",
     ),
     "flux-3": ModelSpec(
         key="flux-3", label="FLUX 3 Image", backend="fal",
-        max_images=10, mask_support="bbox",
+        max_images=10,
         cost=_flux3_cost, build=_build_flux3,
-        notes="Released 2026-10-01. Masks become a bounding-box edit; rest of image is kept.",
-    ),
-    "ideogram-4.5": ModelSpec(
-        key="ideogram-4.5", label="Ideogram 4.5", backend="fal",
-        max_images=5, mask_support="inverted", default_quality="high",
-        cost=lambda res, q: {"very_low": 0.008, "low": 0.03, "medium": 0.06}.get(q, 0.22),
-        build=_build_ideogram45,
-        notes="Text-to-image takes NO reference photos. With images: images[0] is the source, "
-              "up to 4 more are references. Mask = Precise Edit (pixels outside restored). Max 2K.",
+        notes="Released 2026-10-01. Garbles small text.",
     ),
 }
 
@@ -494,14 +340,9 @@ def _run_gemini(prompt, images, aspect_ratio, resolution, output_path):
 # Entry point
 # ---------------------------------------------------------------------------
 
-def run(model_key, prompt, images=(), output="out.png", *, mask=None,
+def run(model_key, prompt, images=(), output="out.png", *,
         aspect_ratio="16:9", resolution="2k", quality=None, seed=None):
-    """
-    Generate or edit an image with any registered model. Returns a Result.
-
-    images[0] is treated as the edit source when a mask is given; its full
-    resolution is uploaded. Other images are capped at 2048px.
-    """
+    """Generate an image with any registered model. Images are capped at 2048px. Returns a Result."""
     load_dotenv(find_dotenv(usecwd=True))
 
     if model_key not in MODELS:
@@ -513,17 +354,9 @@ def run(model_key, prompt, images=(), output="out.png", *, mask=None,
     output_path = Path(output)
     warnings = []
 
-    if mask and not images:
-        raise SystemExit("Error: a mask needs a source image (pass it as the first image).")
     if len(images) > spec.max_images:
         warnings.append(f"{spec.label} accepts {spec.max_images} images; extra images were dropped.")
         images = images[:spec.max_images]
-    if mask and spec.mask_support == "none":
-        warnings.append(f"{spec.label} has no mask support — the whole image will be regenerated.")
-    if model_key == "ideogram-4.5" and images and not mask and len(images) > 1:
-        warnings.append("Ideogram 4.5 treats Image 1 as the source to edit, not as a reference.")
-    if model_key == "ideogram-4.5" and resolution == "4k":
-        warnings.append("Ideogram 4.5 maxes out at 2K; using 2K.")
 
     quality = quality or spec.default_quality
     notes = ""
@@ -533,12 +366,9 @@ def run(model_key, prompt, images=(), output="out.png", *, mask=None,
     else:
         if not os.environ.get("FAL_KEY"):
             raise SystemExit("Error: FAL_KEY not set. Add it to .env (get one at fal.ai/dashboard/keys).")
-        mask_img = load_mask(mask, images[0]) if mask else None
         ctx = {
             "prompt": prompt,
-            "image_urls": [_fal_upload(p, keep_full_res=(i == 0 and mask is not None)) for i, p in enumerate(images)],
-            "source_path": images[0] if images else None,
-            "mask": mask_img if spec.mask_support != "none" else None,
+            "image_urls": [_fal_upload(p) for p in images],
             "aspect_ratio": aspect_ratio,
             "resolution": resolution,
             "quality": quality,
@@ -560,9 +390,9 @@ def run(model_key, prompt, images=(), output="out.png", *, mask=None,
 
 
 def print_models():
-    print(f"{'model':<24} {'backend':<7} {'imgs':>4}  {'mask':<9} {'~$/img @2k':>10}  notes")
+    print(f"{'model':<24} {'backend':<7} {'imgs':>4}  {'~$/img @2k':>10}  notes")
     for spec in MODELS.values():
-        print(f"{spec.key:<24} {spec.backend:<7} {spec.max_images:>4}  {spec.mask_support:<9} "
+        print(f"{spec.key:<24} {spec.backend:<7} {spec.max_images:>4}  "
               f"{estimate_cost(spec.key):>10.3f}  {spec.notes}")
 
 

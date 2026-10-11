@@ -489,27 +489,7 @@ Every prompt should include these photorealism anchors from the start (don't wai
   --output "output/{today}/{video-slug}/concept-{letter}/v{n}.png"
 ```
 
-**Choosing a model:** All commands take `--model` (default: `$IMAGE_MODEL` from `.env`, else `gemini`). Keep one model per concept across rounds so eval results stay comparable. Every command prints its estimated cost; add it to the running total. Options: `gemini`, `nano-banana-pro`, `nano-banana-2.1`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`, `flux-3`, `ideogram-4.5`. Everything except `gemini` needs `FAL_KEY`. Notes:
-- `gpt-image-2.5-*` (16 images) and `flux-3` (10 images) can take more headshots than Gemini — passing 4-8 varied headshots is fine.
-- `ideogram-4.5` treats Image 1 as a photo to edit, not a reference. Only use it for generation when Image 1 is a real frame you want to build on.
-
-### Fine edits on an approved image (mix and match)
-
-When the user approves a thumbnail (or provides a real video frame) and wants ONE region changed, don't regenerate the whole image. Use `edit_image.py` with a model that preserves pixels outside a mask — this can be a different model than the one that generated the image:
-
-```bash
-.venv/bin/python execution/edit_image.py \
-  --model ideogram-4.5 \
-  --source "output/{today}/{video-slug}/concept-{letter}/v{n}.png" \
-  --mask "output/{today}/{video-slug}/concept-{letter}/mask-{what}.png" \
-  --prompt "{what should change inside the white area}" \
-  --output "output/{today}/{video-slug}/concept-{letter}/v{n+1}.png"
-```
-
-- **Mask:** same size as the source, WHITE = change, BLACK = keep. Draw it with PIL (a rectangle or ellipse around the region is enough).
-- **Mask-aware models:** `ideogram-4.5` (Precise Edit), `flux-3` (mask becomes a bounding box), `gpt-image-2.5-*` (mask). Gemini / Nano Banana ignore masks and regenerate every pixel.
-- The script prints **drift** outside the mask: PSNR above ~40 dB = untouched, below ~30 dB = visibly changed. If drift is high, tell the user and try another model.
-- For pure text changes, compositing with PIL is still the zero-drift option (see learnings).
+**Choosing a model:** All commands take `--model` (default: `$IMAGE_MODEL` from `.env`, else `gemini`). Keep one model per concept across rounds so eval results stay comparable. Every command prints its estimated cost; add it to the running total. Options: `gemini`, `nano-banana-pro`, `nano-banana-2.1`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`, `flux-3`. Everything except `gemini` needs `FAL_KEY`.
 
 ### Critical rules
 

@@ -75,7 +75,7 @@ def parse_args():
     )
     parser.add_argument(
         "--quality", default=None,
-        help="Quality tier for models that have one (GPT Image: low..max, Ideogram: low/medium/high)"
+        help="Quality tier for models that have one (GPT Image: low/medium/high/xhigh/max)"
     )
     parser.add_argument(
         "--seed", type=int, default=None,

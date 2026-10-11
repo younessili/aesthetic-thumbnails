@@ -78,13 +78,7 @@ All API keys stay local — stored in your `.env` file, never uploaded.
 
 ## Image Models
 
-Nano Banana Pro (Gemini) is the default. Add a [fal.ai](https://fal.ai/dashboard/keys) key as `FAL_KEY` in `.env` to unlock GPT Image 2.5, FLUX 3, Ideogram 4.5 and Nano Banana 2.1, then pick one with `--model` or set `IMAGE_MODEL`.
-
-| Script | What it does |
-|--------|-------------|
-| `generate_thumbnail.py --list-models` | Lists every model with its image limit, mask support and cost |
-| `edit_image.py` | Changes one masked region of an approved image or real frame, and reports how much the rest drifted |
-| `compare_models.py` | Runs the same prompts through several models and builds a blind-scoring gallery |
+Nano Banana Pro (Gemini) is the default. Add a [fal.ai](https://fal.ai/dashboard/keys) key as `FAL_KEY` in `.env` to unlock GPT Image 2.5, FLUX 3 and Nano Banana 2.1, then pick one with `--model` or set `IMAGE_MODEL`. Run `generate_thumbnail.py --list-models` to see each model's image limit and cost.
 
 ---
 
