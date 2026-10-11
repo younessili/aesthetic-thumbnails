@@ -20,7 +20,7 @@ Usage:
         --prompt "edit instruction" \
         --output path/to/output-v2.png
 
-    With example thumbnails from high-performing videos:
+    With style references (thumbnails the user likes, e.g. from assets/inspiration/):
     python3 generate_thumbnail.py \
         --headshot path/to/headshot.png \
         --examples path/to/example1.jpg path/to/example2.jpg \
@@ -59,7 +59,7 @@ def parse_args():
     )
     parser.add_argument(
         "--examples", nargs="*", default=[],
-        help="Path(s) to example thumbnails from high-performing videos (style inspiration)"
+        help="Path(s) to thumbnails whose style to follow (e.g. from assets/inspiration/)"
     )
     parser.add_argument(
         "--prompt",
@@ -110,21 +110,22 @@ def main():
     # Image order sent to the model:
     #   1. Headshot(s)
     #   2. Reference images (logos, icons, previous thumbnails)
-    #   3. Example thumbnails (high-performing videos for style inspiration)
+    #   3. Style references (thumbnails the user likes)
     #
     # The prompt should reference these by position (Image 1, Image 2, etc.)
-    # Examples are appended last and prefixed with a system note so the model
-    # knows they're style references, not elements to reproduce exactly.
+    # Style references are appended last, with a note so the model copies
+    # their style but not their content.
 
     prompt = args.prompt
 
     if args.examples:
         prompt += (
-            "\n\nSTYLE EXAMPLES:\n"
-            "The final attached images are thumbnails from high-performing YouTube videos "
-            "on this topic. Study their composition, color usage, text placement, and visual "
-            "hierarchy — then apply those patterns to create an ORIGINAL thumbnail. "
-            "Do NOT copy these thumbnails. Use them as inspiration for what works."
+            f"\n\nSTYLE REFERENCES:\n"
+            f"The last {len(args.examples)} attached image(s) are thumbnails whose style to follow. "
+            "Use them ONLY as a style reference: how real the photography feels, lighting and "
+            "contrast, how big the face is, typography (font, weight, color, placement) and "
+            "how few elements they use. Do NOT copy their people, their words, their logos, or "
+            "the small duration badge in their corner. Create an ORIGINAL thumbnail."
         )
 
     images = list(args.headshot) + list(args.reference) + list(args.examples)

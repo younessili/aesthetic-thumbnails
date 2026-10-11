@@ -1,6 +1,28 @@
 # YouTube Thumbnail Generator — V2
 
-Generate original YouTube thumbnails using the configured image model (default: Nano Banana Pro via Gemini — run `.venv/bin/python execution/generate_thumbnail.py --list-models` for the others). V2 uses a 3-phase creative workflow: Research outliers, design concepts as visual metaphors, then iteratively refine until the thumbnail is right.
+Generate original YouTube thumbnails using the configured image model (default: Nano Banana Pro via Gemini — run `.venv/bin/python execution/generate_thumbnail.py --list-models` for the others). V2 uses a 3-phase creative workflow: research what works, design concepts as visual metaphors, then iteratively refine until the thumbnail is right.
+
+---
+
+## Before You Start: What's Available
+
+The core workflow needs only `GEMINI_API_KEY` and headshots. Three features are optional, so check what this setup has before Phase 1 and adapt — never fail because an optional piece is missing:
+
+| Feature | Available when | If missing |
+|---------|---------------|------------|
+| **Outlier research** (Phase 1a) | `YOUTUBE_API_KEY` is set in `.env` | Skip 1a. Research = inspiration folder + guides + learnings. |
+| **Style references** (Phase 1b, Phase 3) | `assets/inspiration/` contains thumbnails | Skip 1b. Describe the style in the prompt instead. |
+| **Other image models** (Phase 3) | `FAL_KEY` is set in `.env` | Use `gemini` only. |
+
+Check silently:
+```bash
+grep -qE '^YOUTUBE_API_KEY=.+' .env && echo "outliers: on" || echo "outliers: off"
+grep -qE '^FAL_KEY=.+' .env && echo "models: all" || echo "models: gemini only"
+m=$(grep -E '^IMAGE_MODEL=.+' .env | cut -d= -f2); echo "default model: ${m:-gemini}"
+ls assets/inspiration/ | grep -viE '^\.gitkeep$' | wc -l | xargs echo "inspiration thumbnails:"
+```
+
+Tell the user in one line what's on and off (e.g. "Running with outlier research off, 8 inspiration thumbnails, model: gpt-image-2.5-sunburst."). If something useful is off, mention once how to turn it on — don't nag.
 
 ---
 
@@ -18,11 +40,11 @@ The best thumbnails don't follow a formula — they break patterns. Study what's
 
 ## Phase 1: Research
 
-Before designing anything, gather inspiration from two sources.
+Before designing anything, gather inspiration from up to two sources: niche outliers (optional) and the user's curated inspiration folder.
 
-### 1a: Find Outlier Thumbnails
+### 1a: Find Outlier Thumbnails (optional — needs `YOUTUBE_API_KEY`)
 
-Run the outlier research script to find videos that massively outperformed their channel's average. Search within the video's topic space — the goal is to understand what thumbnails exist in this niche so you can break the pattern.
+Skip this step if the key isn't set. Otherwise, run the outlier research script to find videos that massively outperformed their channel's average. Search within the video's topic space — the goal is to understand what thumbnails exist in this niche so you can break the pattern.
 
 **Choosing niches:** Search 2-3 variations of the video's actual topic, plus optionally one adjacent-audience niche that shares viewers but isn't the exact same thing. The purpose is niche gap analysis — understanding what's working and what's NOT in this space.
 
@@ -49,15 +71,15 @@ After running, review the downloaded thumbnails visually with the `Read` tool. D
 - What visual technique or metaphor did the outliers use to break the pattern?
 - What's MISSING from this niche — what approach has nobody tried?
 
-### 1b: Check Your Curated Inspiration
+### 1b: Check the Curated Inspiration (optional — needs thumbnails in `assets/inspiration/`)
 
-Check `assets/inspiration/` for thumbnails you have manually saved. These represent your actual taste — they carry as much (or more) weight as algorithmic outliers.
+`assets/inspiration/` holds thumbnails the user saved because they like the style. They represent the user's actual taste — they carry as much (or more) weight as algorithmic outliers.
 
 ```bash
 ls assets/inspiration/
 ```
 
-If files exist, review them visually with the `Read` tool. Note what speaks to you aesthetically.
+If files exist, review them visually with the `Read` tool and note what they share: how real the photography feels, lighting and contrast, how big the face is, typography (font, weight, color, placement), and how few elements they use. These are also the files you can pass to the image model as **style references** in Phase 3 (`--examples`).
 
 ### 1c: Understand the Video Topic
 
@@ -96,12 +118,13 @@ Apply relevant learnings when designing concepts and writing Gemini prompts. If 
 
 ### 1f: Write Research Takeaways
 
-After reviewing ALL outliers and inspiration, write a structured analysis before moving to Phase 2. This is NOT optional — concepts that skip this step produce generic thumbnails.
+After reviewing all outliers and inspiration you have, write a structured analysis before moving to Phase 2. This is NOT optional — concepts that skip this step produce generic thumbnails.
 
 ```
 RESEARCH TAKEAWAYS:
 
-Outliers reviewed: [count]
+Outliers reviewed: [count, or "skipped — no YouTube key"]
+Inspiration thumbnails reviewed: [count]
 
 Top 3 visual techniques I observed:
 1. [specific technique] — seen in [which thumbnail] — works because [why]
@@ -142,7 +165,7 @@ Propose 2-3 visual METAPHORS. Not layouts. Not "person on right, icon on left." 
 Draw from three sources:
 
 1. **Script-driven** — the most visually powerful moment from the video outline. What image captures the core idea without words?
-2. **Inspiration-driven** — a visual approach borrowed from an outlier or curated thumbnail, adapted (not copied) for this video
+2. **Inspiration-driven** — a visual approach borrowed from an outlier or curated inspiration thumbnail, adapted (not copied) for this video
 3. **Wild card** — something original. A creative risk that doesn't come from any reference.
 
 You can also bring your own concept and skip straight to Phase 3.
@@ -185,6 +208,8 @@ Text: [1-3 words that capture the FEELING] or "no text — visual only"
 
 Reference: [REQUIRED — which outlier/inspiration informed this + which
   specific visual technique from Research Takeaways you're adapting.
+  If an inspiration thumbnail defines the style, name 1-3 files to pass
+  as style references (--examples) in Phase 3.
   If this is a wild card: say "Wild card — no reference" and explain
   why this direction is better than anything in the research.]
 
@@ -489,13 +514,25 @@ Every prompt should include these photorealism anchors from the start (don't wai
   --output "output/{today}/{video-slug}/concept-{letter}/v{n}.png"
 ```
 
-**Choosing a model:** All commands take `--model` (default: `$IMAGE_MODEL` from `.env`, else `gemini`). Keep one model per concept across rounds so eval results stay comparable. Every command prints its estimated cost; add it to the running total. Options: `gemini`, `nano-banana-pro`, `nano-banana-2.1`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`, `flux-3`. Everything except `gemini` needs `FAL_KEY`.
+**With style references (optional):** when the concept names inspiration thumbnails, add them with `--examples` (1-3 files). They're attached after the headshots with an instruction to copy only the style — photography, contrast, typography, layout — never the people, words or YouTube's duration badge. In testing, this was the single biggest step toward thumbnails that look designed but still real. Describe the type explicitly in the prompt too (words, placement, color).
+
+```bash
+.venv/bin/python execution/generate_thumbnail.py \
+  --headshot "assets/headshots/{headshot-1}" "assets/headshots/{headshot-2}" \
+  --examples "assets/inspiration/{style-ref-1}" "assets/inspiration/{style-ref-2}" \
+  --prompt "{complete prompt}" \
+  --output "output/{today}/{video-slug}/concept-{letter}/v1.png"
+```
+
+If the user has real frames from this video, they're a stronger likeness and scene reference than studio headshots — pass 1-2 frames via `--headshot` alongside (or instead of) a headshot.
+
+**Choosing a model:** All commands take `--model` (default: `$IMAGE_MODEL` from `.env`, else `gemini`). Keep one model per concept across rounds so eval results stay comparable. Every command prints its estimated cost; add it to the running total. Options: `gemini`, `nano-banana-pro`, `nano-banana-2.1`, `gpt-image-2.5-flare`, `gpt-image-2.5-sunburst`, `flux-3`. Everything except `gemini` needs `FAL_KEY`. Keep to 2 headshots on every model — passing more made results look more staged, not more like the person.
 
 ### Critical rules
 
 - Write a NEW complete prompt every round — Gemini doesn't remember previous calls
 - Always pass headshot(s) every round — likeness degrades without the reference
-- **Outlier thumbnails are for YOUR creative reference only** — do NOT pass them to Gemini via `--examples`. Study them yourself and translate what you learn into prompt text.
+- **Outlier thumbnails are for YOUR creative reference only** — do NOT pass them to the model via `--examples`. They're the niche's average you want to stand out from. Only the user's curated inspiration thumbnails go in as style references.
 - Run concepts in parallel when refining multiple concepts
 - After auto-refinement, present the best version of each concept to the user with the Tier 2 diagnostic and 3 title options
 
@@ -575,12 +612,13 @@ These apply to ALL concepts regardless of creative direction:
 
 | Issue | Fix |
 |-------|-----|
-| No image returned / `candidates` is None | Simplify the prompt. Reduce the number of attached images (max 2-3 total on `gemini`). Transient 429/5xx errors are retried automatically with backoff. |
+| No image returned / `candidates` is None | Simplify the prompt. Reduce the number of attached images (stay at or under 5 total: 2 headshots + up to 3 style references). Transient 429/5xx errors are retried automatically with backoff. |
 | Person doesn't look like the headshot | Add more explicit instruction: "Use the exact likeness from the attached reference photo including facial hair and glasses." Try passing 2 headshots for more reference angles. |
 | Text is garbled or unreadable | Gemini's text rendering isn't perfect. Consider generating without text and adding it in post-production (Figma, Canva). |
 | Wrong aspect ratio | The script sets 16:9 automatically. If the output looks wrong, check the saved file dimensions. |
 | API error or timeout | Check that GEMINI_API_KEY is set in `.env`. Try again — transient 500 errors happen. |
-| find_outliers.py returns no results | Lower `--min-outlier-score` to 2.0. Try different niche search terms. Check that YOUTUBE_API_KEY is set. If API quota is exhausted, proceed to Phase 2 using curated inspiration only. |
+| find_outliers.py returns no results | Lower `--min-outlier-score` to 2.0. Try different niche search terms. If API quota is exhausted, proceed with curated inspiration only. |
 | YouTube API quota exhausted (403) | The script exits immediately on quota errors. Wait until tomorrow (resets daily) or proceed without Phase 1 research — it's valuable but not blocking. |
-| Too many images cause generation failure | On `gemini`, use max 1-2 headshots + 1 reference and don't pass `--examples` alongside `--reference`. Other models take more (`--list-models` shows each limit); extra images are dropped with a warning. |
+| Too many images cause generation failure | Use 2 headshots + up to 3 `--examples`, and drop `--examples` when passing a `--reference` for iteration. `--list-models` shows each model's hard limit; extra images are dropped with a warning. |
+| Output copies a style reference too literally (same words, people, duration badge) | Pass fewer `--examples` and restate in the prompt that they're style-only. |
 | `FAL_KEY not set` | Every model except `gemini` runs through fal.ai. Add `FAL_KEY=` to `.env` (fal.ai/dashboard/keys), or use `--model gemini`. |
