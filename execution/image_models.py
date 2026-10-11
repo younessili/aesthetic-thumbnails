@@ -83,6 +83,12 @@ def validate_image_file(path):
         raise SystemExit(f"Error: '{path}' is too small to be a valid image ({len(header)} bytes).")
 
 
+def open_image(path):
+    """Open an image upright. Camera JPEGs often store pixels sideways plus an EXIF
+    rotation tag; re-encoding drops the tag, so models would see a sideways face."""
+    return ImageOps.exif_transpose(Image.open(path))
+
+
 def resize_if_needed(img, max_edge=2048):
     """Resize image if larger than max_edge on any side."""
     w, h = img.size
@@ -94,7 +100,7 @@ def resize_if_needed(img, max_edge=2048):
 
 def tier_for_source(path):
     """Pick the resolution tier closest to a source image, so edits don't downscale it."""
-    w, h = Image.open(path).size
+    w, h = open_image(path).size
     mp = w * h / 1_000_000
     if mp <= 1.3:
         return "1k"
@@ -118,7 +124,7 @@ def dims_for(aspect_ratio, resolution):
 
 def load_mask(mask_path, source_path):
     """Load a WHITE=edit mask as an 'L' image matching the source size."""
-    src_size = Image.open(source_path).size
+    src_size = open_image(source_path).size
     mask = Image.open(mask_path).convert("L")
     if mask.size != src_size:
         mask = mask.resize(src_size, Image.NEAREST)
@@ -143,7 +149,7 @@ def drift_report(source_path, result_path, mask_path=None):
     mask). Returns mean absolute difference (0-255) and PSNR in dB. PSNR above
     ~40 dB is visually identical; below ~30 dB the change is noticeable.
     """
-    src = Image.open(source_path).convert("RGB")
+    src = open_image(source_path).convert("RGB")
     out = Image.open(result_path).convert("RGB")
     resized = out.size != src.size
     if resized:
@@ -193,10 +199,11 @@ def _fal_upload(path, keep_full_res=False):
     import fal_client
 
     validate_image_file(path)
-    img = Image.open(path)
-    if keep_full_res and img.format in ("PNG", "JPEG", "WEBP"):
+    raw = Image.open(path)
+    if keep_full_res and raw.format in ("PNG", "JPEG", "WEBP") and raw.getexif().get(0x0112, 1) == 1:
         return fal_client.upload_file(path)
-    # Re-encode as PNG (handles AVIF, strips nothing visible) and cap size for references
+    # Re-encode upright as PNG (handles AVIF and EXIF rotation) and cap size for references
+    img = ImageOps.exif_transpose(raw)
     if not keep_full_res:
         img = resize_if_needed(img)
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
@@ -296,7 +303,7 @@ def _build_gpt_image(tier):
                 else dims_for(ctx["aspect_ratio"], ctx["resolution"])
             if ctx["mask"] is not None:
                 # OpenAI convention: transparent pixels = area to edit
-                src = Image.open(ctx["source_path"]).convert("RGBA")
+                src = open_image(ctx["source_path"]).convert("RGBA")
                 src.putalpha(ImageOps.invert(ctx["mask"]))
                 args["mask_url"] = _fal_upload_pil(src)
             return f"openai/gpt-image-2.5/{tier}/edit", args
@@ -450,7 +457,7 @@ def _run_gemini(prompt, images, aspect_ratio, resolution, output_path):
     contents = [prompt]
     for path in images:
         validate_image_file(path)
-        contents.append(resize_if_needed(Image.open(path)))
+        contents.append(resize_if_needed(open_image(path)))
 
     image_config = {"image_size": resolution.upper()}
     if aspect_ratio != "auto":
