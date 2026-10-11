@@ -81,6 +81,14 @@ ls assets/inspiration/
 
 If files exist, review them visually with the `Read` tool and note what they share: how real the photography feels, lighting and contrast, how big the face is, typography (font, weight, color, placement), and how few elements they use. These are also the files you can pass to the image model as **style references** in Phase 3 (`--examples`).
 
+**Before using one as a style reference, make sure it is just the thumbnail.** Users often drop raw screenshots: YouTube's title and channel text underneath, two thumbnails side by side, or images that aren't thumbnails at all. Anything in the file leaks into the generation. Crop each thumbnail you plan to pass to a clean 16:9 file next to the original (read the image, estimate the box, check the crop with `Read`):
+
+```bash
+.venv/bin/python -c "from PIL import Image; Image.open('assets/inspiration/{screenshot}').crop(({left}, {top}, {right}, {bottom})).save('assets/inspiration/ref-{short-name}.png')"
+```
+
+Skip files that aren't thumbnails. The duration badge in the corner can stay — the `--examples` instruction tells the model to ignore it.
+
 ### 1c: Understand the Video Topic
 
 Ask the user (if not already provided):

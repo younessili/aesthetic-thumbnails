@@ -185,7 +185,7 @@ From their answers (or the URL analysis), update `context/visual-brand.md` (alre
 "Saved your brand guide to `context/visual-brand.md`. You can edit it anytime if you want to refine."
 
 **Style inspiration (optional, recommended):**
-"One more thing that makes a big difference: drop 3-10 YouTube thumbnails you love into `assets/inspiration/` — screenshots are fine. I study them when designing concepts and can show them to the image model as style references, so your thumbnails come out in a style you actually like. They stay on your machine."
+"One more thing that makes a big difference: drop 3-10 YouTube thumbnails you love into `assets/inspiration/` — screenshots are fine, I'll crop them to just the thumbnail. I study them when designing concepts and can show them to the image model as style references, so your thumbnails come out in a style you actually like. They stay on your machine."
 
 If the user skips: "No problem — you can add some anytime."
 
