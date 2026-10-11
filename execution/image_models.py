@@ -32,7 +32,6 @@ import os
 import sys
 import tempfile
 import time
-import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Optional
@@ -247,8 +246,13 @@ def _download(url):
     if url.startswith("data:"):
         import base64
         return base64.b64decode(url.split(",", 1)[1])
-    with urllib.request.urlopen(url, timeout=300) as r:
-        return r.read()
+    # httpx ships with fal_client and uses certifi; urllib relies on the system CA
+    # store, which python.org builds on macOS often lack (CERTIFICATE_VERIFY_FAILED).
+    import httpx
+
+    response = httpx.get(url, timeout=300, follow_redirects=True)
+    response.raise_for_status()
+    return response.content
 
 
 # ---------------------------------------------------------------------------
