@@ -557,6 +557,8 @@ After presenting concepts, ask: "Which concept(s) do you want me to refine?"
 
 After auto-refinement presents the best version, the user may still want changes. These are SEPARATE from the auto-refinement loop — the user's creative feedback always gets additional rounds (no limit, just cost awareness). Show the running cost and warn if approaching $1.
 
+**Variations vs fixes:** `--reference` makes the model copy the previous version almost exactly — use it only for a small fix on an image the user likes. When the user asks for variations, generate each one fresh (no `--reference`) from a rewritten prompt that changes something visible: background, lighting, setting, or medium (e.g. light grid → dark grid → real whiteboard). Keep the same headshots, model and style references so the variations stay comparable.
+
 ### Output structure
 
 ```
