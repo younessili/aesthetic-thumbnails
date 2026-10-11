@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from dotenv import load_dotenv, find_dotenv
-from PIL import Image, ImageChops, ImageOps, ImageStat
+from PIL import Image, ImageChops, ImageFilter, ImageOps, ImageStat
 
 # Enable AVIF support — YouTube thumbnails are often AVIF
 try:
@@ -128,6 +128,40 @@ def load_mask(mask_path, source_path):
     if mask.size != src_size:
         mask = mask.resize(src_size, Image.NEAREST)
     return mask.point(lambda v: 255 if v >= 128 else 0)
+
+
+def region_mask(source_path, region):
+    """
+    Build a WHITE=edit mask from a box "x0,y0,x1,y1" given as fractions of the
+    image (0-1), e.g. "0,0.1,0.4,0.6" = left 40%, from 10% to 60% down.
+    """
+    try:
+        x0, y0, x1, y1 = (float(v) for v in region.split(","))
+    except ValueError:
+        raise SystemExit(f"Error: --region must be four numbers x0,y0,x1,y1 (0-1), got '{region}'")
+    if not (0 <= x0 < x1 <= 1 and 0 <= y0 < y1 <= 1):
+        raise SystemExit(f"Error: --region needs 0 <= x0 < x1 <= 1 and 0 <= y0 < y1 <= 1, got '{region}'")
+    w, h = open_image(source_path).size
+    mask = Image.new("L", (w, h), 0)
+    mask.paste(255, (round(x0 * w), round(y0 * h), round(x1 * w), round(y1 * h)))
+    return mask
+
+
+def composite_edit(source_path, result_path, mask_path, output_path):
+    """
+    Paste the model's output back into the source only inside the mask, with a
+    soft edge. Pixels outside the mask are the source's, untouched, whatever the
+    model did to them.
+    """
+    src = open_image(source_path).convert("RGB")
+    out = Image.open(result_path).convert("RGB")
+    if out.size != src.size:
+        out = out.resize(src.size, Image.LANCZOS)
+    mask = load_mask(mask_path, source_path)
+    feather = max(2, round(min(src.size) * 0.006))
+    soft = mask.filter(ImageFilter.GaussianBlur(feather))
+    Image.composite(out, src, soft).save(output_path)
+    return Path(output_path)
 
 
 def mask_bbox_1000(mask):
