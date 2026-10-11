@@ -495,21 +495,31 @@ Every prompt should include these photorealism anchors from the start (don't wai
 
 ### Fine edits on an approved image (mix and match)
 
-When the user approves a thumbnail (or provides a real video frame) and wants ONE region changed, don't regenerate the whole image. Use `edit_image.py` with a model that preserves pixels outside a mask — this can be a different model than the one that generated the image:
+This is how the user gets from "80% there" to done. When the user likes a thumbnail (or provides a real video frame) and asks for a local change ("fix the text on the screen", "my face looks off", "remove that person"), do NOT regenerate the whole image — every full regeneration re-rolls the parts they already liked. Edit only the region instead. The editing model can differ from the one that generated the image.
+
+1. **Look at the image** with the `Read` tool and pick a box around what should change, as fractions of width/height: `x0,y0,x1,y1` (0-1). Keep it tight but include a little margin around the object.
+2. **Pick the model** for the job:
+   - Text, signs, screens, labels → `ideogram-4.5` (best text, Precise Edit)
+   - Objects, background, clothing → `ideogram-4.5` or `gpt-image-2.5-sunburst`
+   - Face / likeness fix → `gpt-image-2.5-sunburst` or `nano-banana-2.1`, and pass 1-2 headshots (or a real video frame of the user) as `--reference`. Box the head only.
+3. **Run the edit:**
 
 ```bash
 .venv/bin/python execution/edit_image.py \
   --model ideogram-4.5 \
   --source "output/{today}/{video-slug}/concept-{letter}/v{n}.png" \
-  --mask "output/{today}/{video-slug}/concept-{letter}/mask-{what}.png" \
-  --prompt "{what should change inside the white area}" \
+  --region "{x0},{y0},{x1},{y1}" \
+  --prompt "{what the boxed area should look like — describe the result, not the change}" \
   --output "output/{today}/{video-slug}/concept-{letter}/v{n+1}.png"
 ```
 
-- **Mask:** same size as the source, WHITE = change, BLACK = keep. Draw it with PIL (a rectangle or ellipse around the region is enough).
-- **Mask-aware models:** `ideogram-4.5` (Precise Edit), `flux-3` (mask becomes a bounding box), `gpt-image-2.5-*` (mask). Gemini / Nano Banana ignore masks and regenerate every pixel.
-- The script prints **drift** outside the mask: PSNR above ~40 dB = untouched, below ~30 dB = visibly changed. If drift is high, tell the user and try another model.
-- For pure text changes, compositing with PIL is still the zero-drift option (see learnings).
+4. **Show the user v{n} and v{n+1} side by side.** If the edit missed, adjust the box or prompt, or try another model — v{n} is never lost.
+
+How it protects the rest of the image:
+- The model's output is pasted back into the source **inside the box only** (soft edge). Everything outside is the original pixels, so approved parts can't drift — whichever model you use.
+- The script still prints the model's own **drift** outside the box (PSNR above ~40 dB = it respected the box, below ~30 dB = it repainted things). A low number doesn't hurt the result, but tells you that model is a poor editor.
+- `<output>-raw.png` (unpasted model output) and `<output>-mask.png` are saved next to the result. A hand-drawn `--mask` (WHITE = change) also works instead of `--region`.
+- For pure text changes on a flat surface, drawing the text with PIL is still the free, exact option (see learnings).
 
 ### Critical rules
 
