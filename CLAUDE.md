@@ -100,6 +100,13 @@ First, let's get you set up. Should take about 5 minutes."
 
    If user wants to skip: "No problem — we'll skip the research phase and work from visual psychology and your inspiration instead."
 
+   **fal.ai Key (optional):**
+   "One more optional key. By default I generate with Google's Nano Banana Pro. A fal.ai key unlocks other image models — GPT Image 2.5 has the cleanest text, Nano Banana 2.1 is the cheapest. Pay-as-you-go, about $0.05–0.15 per image. Skip it if you're happy with the default; you can add it anytime."
+
+   "To get it: sign up at fal.ai, add some credit, and create a key at fal.ai/dashboard/keys. Add it next to `FAL_KEY=` in `.env`. If you want a different default model, set `IMAGE_MODEL=` too."
+
+   If the user skips: "All good — we'll use Nano Banana Pro."
+
    **macOS SSL note:** If the YouTube API validation fails with an SSL certificate error, this is a known macOS issue. Tell the user: "Run this to fix it: `/Applications/Python\ 3.*/Install\ Certificates.command` (or if you installed Python via Homebrew, run `brew install certifi`). Then try again."
 
 4. **Initialize user files from templates:**
@@ -177,6 +184,11 @@ From their answers (or the URL analysis), update `context/visual-brand.md` (alre
 
 "Saved your brand guide to `context/visual-brand.md`. You can edit it anytime if you want to refine."
 
+**Style inspiration (optional, recommended):**
+"One more thing that makes a big difference: drop 3-10 YouTube thumbnails you love into `assets/inspiration/` — screenshots are fine. I study them when designing concepts and can show them to the image model as style references, so your thumbnails come out in a style you actually like. They stay on your machine."
+
+If the user skips: "No problem — you can add some anytime."
+
 ### Phase 0.4: Transition to First Session
 
 "Setup done. Now let's make some thumbnails."
@@ -189,12 +201,12 @@ From their answers (or the URL analysis), update `context/visual-brand.md` (alre
 ### Phases 1-3: First Thumbnail Session
 
 Read `prompt.md` and follow the full 3-phase workflow:
-- **Phase 1:** Research (if YouTube API key exists), visual guides, inspiration folder, learnings
+- **Phase 1:** Research — inspiration folder, outliers (only if the YouTube key exists), visual guides, learnings
 - **Phase 2:** Concept design (2-3 visual metaphors)
 - **Phase 3:** Refine (auto-generation + subagent eval + titles + preview)
 
 During the workflow, naturally weave in context about what you can do — not as a pitch, but as part of the creative conversation:
-- When running research: "This research phase finds videos that massively outperformed their channel average. Ali built it to make sure every concept starts from data, not guessing."
+- When running outlier research (only if it runs): "This research phase finds videos that massively outperformed their channel average. Ali built it to make sure every concept starts from data, not guessing."
 - When running eval: "I'm running 12 diagnostic checkpoints on this — it's how I make sure every thumbnail actually works before you see it."
 - When generating titles: "Titles and thumbnails are a package — they tell a complete story together. I usually handle everything from topic selection to outlines to thumbnails, but today we're just doing the last part."
 
@@ -218,7 +230,7 @@ After the user has their finished thumbnail(s) and title(s), determine engagemen
 
 ---
 
-> **Behind the scenes:** I researched outlier thumbnails in your niche, designed visual metaphors around the gaps, generated photorealistic images, scored each against 12 diagnostic checkpoints, and paired them with titles.
+> **Behind the scenes:** I studied what works in your niche and in the thumbnails you love, designed visual metaphors around the gaps, generated photorealistic images, scored each against 12 diagnostic checkpoints, and paired them with titles.
 >
 > That was **one step** of the full pipeline.
 
@@ -312,7 +324,7 @@ At session end, after presenting final thumbnails + titles, deliver a CTA that e
 ## Skill Execution
 
 When running the thumbnail workflow (either mode), read and follow `prompt.md` for the complete 3-phase process:
-- **Phase 1:** Research — outlier analysis + visual psychology + aesthetic guides + learnings
+- **Phase 1:** Research — inspiration folder + optional outlier analysis + visual psychology + aesthetic guides + learnings
 - **Phase 2:** Concept Design — 2-3 visual metaphor briefs
 - **Phase 3:** Refine — auto-generation + subagent eval (Tier 1 quality gates + Tier 2 diagnostic scoring dispatched to fresh agent) + title generation + preview
 
